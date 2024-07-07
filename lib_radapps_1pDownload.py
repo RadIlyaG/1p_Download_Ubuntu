@@ -484,7 +484,7 @@ if __name__ == '__main__':
         res, sw_l = gswv.gets_sw("DC10023311315")
         print(res, sw_l)
 
-    if False:
+    if True:
         sws = SoapWS()
         sws.pages_type = 'str'  # 'list' 'str'
         # 'DF100265011', "21181408", 'DF1002704164' '21449941'
