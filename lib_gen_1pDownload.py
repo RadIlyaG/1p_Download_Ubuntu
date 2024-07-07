@@ -14,12 +14,6 @@ class Gen:
     def power(self, ps, state):
         print(f'Power self:{self}, ps:{ps}, state:{state}')
         
-        # pio = lib_UsbPio.UsbPio()
-        # channel = pio.retrive_usb_channel(main_obj.gaSet['pioBoxSerNum'])
-        # print(f'gen power channel:{channel}')
-
-        # group = 'RBA'
-        # ret = lib_UsbPio.UsbPio.osc_pio(pio, channel, ps, group, state)
         if state == 1:
             st = 'ON'
         else:
