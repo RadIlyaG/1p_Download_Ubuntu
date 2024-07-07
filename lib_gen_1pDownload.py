@@ -9,6 +9,7 @@ import json
 class Gen:
     def __init__(self):
         self.os = os.name
+        self.hidraw = "0"
         
     def power(self, ps, state):
         print(f'Power self:{self}, ps:{ps}, state:{state}')
@@ -33,7 +34,8 @@ class Gen:
         # # ret = subprocess.run([p, st, str(ps)], stdout=subprocess.PIPE).stdout.decode()
         # password = '1q2w3e4r5t'
         # cmd = f'echo {password} | sudo -S {p} HURTM_{str(ps)}={state}'
-        cmd = f'usbrelay /dev/hidraw1_{str(ps)}={state}'
+        # cmd = f'usbrelay /dev/hidraw{self.hidraw}_{str(ps)}={state}'
+        cmd = f'usbrelay PWR_{str(ps)}={str(state)}'
         print(cmd)
         for i in range(1,11):
             with subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
@@ -143,4 +145,33 @@ class Gen:
     def get_xy(self, top):
         print('get_xy', top)
         return str("+" + str(top.winfo_x()) + "+" + str(top.winfo_y()))
+    
+class Ramzor:
+    def __init__(self):
+        # self.hidraw = "1"
+        pass
             
+    def ramzor(self, color, state):
+        if color.lower() == 'red':
+            rlys = "2"
+        elif color == 'green':
+            rlys = "1"
+        elif color == 'all':
+            rlys = ['1', '2']
+
+        # cmd = f'usbrelay /dev/hidraw{self.hidraw}_{rly}={state}'
+        for rly in rlys:
+            cmd = f'usbrelay RMZ_{rly}={str(state)}'
+            print(cmd)
+            for i in range(1,11):
+                with subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
+                    stdout, stderr = process.communicate()
+                    print(f'i:{i} stdout:<{stdout}>, stderr:<{stderr}>, {process.returncode}')
+                    if process.returncode == 0:
+                        break
+        
+        return 0
+        
+
+        
+

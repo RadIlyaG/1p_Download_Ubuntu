@@ -1,7 +1,12 @@
 #!/usr/bin/python3
+
 print('sudo usermod -a -G plugdev ilya')
 print('sudo usermod -a -G tty ilya')
 print('sudo usermod -a -G dialout ilya')
+print('usbrelay -d')
+print('usbrelay HURTM_0=RMZ')
+print('usbrelay HURTM_0=PWR')
+
 import re
 import os
 import sys
@@ -99,6 +104,8 @@ class App(tk.Tk):
 class MainMenu(tk.Menu):
     def __init__(self, appwin):
         super().__init__(appwin) 
+
+        ramz = lib_gen.Ramzor()
                 
         file_menu = tk.Menu(self, tearoff=0)
         file_menu.add_command(label="Capture Console")
@@ -114,6 +121,15 @@ class MainMenu(tk.Menu):
         self.pwr_menu.add_command(label="PS OFF", command=lambda: appwin.gen.gui_Power(1, 0))
         self.pwr_menu.add_command(label="PS OFF and ON", command=lambda: appwin.gen.gui_PowerOffOn(1))
         tools_menu.add_cascade(label="Power", menu=self.pwr_menu)
+        tools_menu.add_separator()
+        self.rmz_menu = tk.Menu(tools_menu, tearoff=0)
+        self.rmz_menu.add_command(label="All ON", command=lambda: ramz.ramzor("all", "1"))
+        self.rmz_menu.add_command(label="All OFF", command=lambda: ramz.ramzor("all", "0"))
+        self.rmz_menu.add_command(label="Red ON", command=lambda: ramz.ramzor("red", "1"))
+        self.rmz_menu.add_command(label="Red OFF", command=lambda: ramz.ramzor("red", "0"))
+        self.rmz_menu.add_command(label="Green ON", command=lambda: ramz.ramzor("green", "1"))
+        self.rmz_menu.add_command(label="Green OFF", command=lambda: ramz.ramzor("green", "0"))
+        tools_menu.add_cascade(label="Ramzor", menu=self.rmz_menu)
         self.add_cascade(label="Tools", menu=tools_menu)
         
         terminal_menu = tk.Menu(self, tearoff=0)
