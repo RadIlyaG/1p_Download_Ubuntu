@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#! /usr/bin/python3
 
 print('sudo usermod -a -G plugdev ilya')
 print('sudo usermod -a -G tty ilya')
@@ -6,6 +6,8 @@ print('sudo usermod -a -G dialout ilya')
 print('usbrelay -d')
 print('usbrelay HURTM_0=RMZ')
 print('usbrelay HURTM_0=PWR')
+
+input('Press RETURN to finish')
 
 import re
 import os
