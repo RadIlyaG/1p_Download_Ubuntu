@@ -7,7 +7,6 @@ print('usbrelay -d')
 print('usbrelay HURTM_0=RMZ')
 print('usbrelay HURTM_0=PWR')
 
-input('Press RETURN to finish')
 
 import re
 import os
@@ -23,6 +22,7 @@ from tkinter import ttk
 import socket
 
 import lib_gen_1pDownload as lib_gen
+import lib_radapps_1pDownload as radapps
 # import Main_1pDownload as main
 
 
@@ -69,7 +69,7 @@ class App(tk.Tk):
         self.config(menu=MainMenu(self))
         
     def quit(self):
-        print(quit, self)
+        print('quit', self)
         self.gen.save_init(self)
         db_dict = {
             "title": "Confirm exit",
@@ -88,7 +88,9 @@ class App(tk.Tk):
             
     def get_pc_ip(self):
         if self.os == "posix":
-            ip = check_output(['hostname', '--all-ip-addresses']).decode().split(' ')[1]
+            for ip in check_output(['hostname', '--all-ip-addresses']).decode().split(' '):
+                if '10.10.10' not in ip and ip != '\n':
+                    break
         else:
             ip = socket.gethostbyname_ex(socket.gethostname())[2][0]
             
@@ -100,7 +102,11 @@ class App(tk.Tk):
         ip = self.gaSet['pc_ip']
         if re.search('192.115.243', ip) or re.search('172.18.9', ip):
             rad_net = True
-        self.gaSet['rad_net'] = rad_net  
+        self.gaSet['rad_net'] = rad_net
+
+    def start_from_combobox(self, values, txt):
+        self.main_frame.frame_start_from.cb_start_from.config(values=values)
+        self.main_frame.frame_start_from.var_start_from.set(txt)
         
                 
 class MainMenu(tk.Menu):
@@ -112,7 +118,7 @@ class MainMenu(tk.Menu):
         file_menu = tk.Menu(self, tearoff=0)
         file_menu.add_command(label="Capture Console")
         file_menu.add_separator()
-        file_menu.add_cascade(label="Quit", command=appwin.quit)
+        file_menu.add_command(label="Quit", command=appwin.quit)
         self.add_cascade(label="File", menu=file_menu)
         
         tools_menu = tk.Menu(self, tearoff=0)
@@ -181,7 +187,9 @@ class StartFromFrame(tk.Frame):
 
     def put_widgets(self):
         self.lab_start_from = ttk.Label(self, text="Start from ")
-        self.cb_start_from = ttk.Combobox(self)
+
+        self.var_start_from = tk.StringVar()
+        self.cb_start_from = ttk.Combobox(self, justify='center', width=35, textvariable=self.var_start_from)
 
         script_dir = os.path.dirname(__file__)
         self.img = Image.open(os.path.join(script_dir, "images", "run1.gif"))
@@ -205,7 +213,9 @@ class InfoFrame(tk.Frame):
     def __init__(self, parent, mainapp):
         super().__init__(parent)
         print(f'InfoFrame, self:<{self}>, parent:<{parent}>')
-        self['relief'] = self.master['relief']
+        # self['relief'] = self.master['relief']
+        self['relief'] = tk.GROOVE
+        self['bd'] = 2
         self.put_widgets()
         
     def put_widgets(self):
@@ -228,8 +238,10 @@ class BarcodesFrame(tk.Frame):
     '''Create the Barcodes Frame on base of tk.Frame'''
     def __init__(self, parent, mainapp):
         super().__init__(parent)
-        self['relief'] = self.master['relief']
-        self['bd'] = self.master['bd']
+        # self['relief'] = self.master['relief']
+        # self['bd'] = self.master['bd']
+        self['relief'] = tk.GROOVE
+        self['bd'] = 2
         print(f'BarcodesFrame, self:<{self}>, parent:<{parent}>')
         self.parent = parent
 
@@ -286,7 +298,50 @@ class BarcodesFrame(tk.Frame):
         print(f'bind_uutId_entry self:{self} mainapp:{mainapp} event:{event}')
         id_number = self.uut_id.get()
         print(f'bind_uutId_entry id_number:{id_number}')
-        mainapp.status_bar_frame.status(id_number)
+        mainapp.start_from_combobox([], '')
+        mainapp.status_bar_frame.status(f'Getting data for {id_number}')
+
+        gen = lib_gen.Gen()
+        ws = radapps.WebServices()
+        ws.print_rtext = False
+
+        res, dicti = ws.retrieve_oi4barcode(id_number)
+        dbr_name = dicti['item']
+        print(f'bind_uutId_entry res:{res} dbr_name:{dbr_name}')
+        if res:
+            mainapp.title(str(mainapp.gaSet['gui_num']) + ': ' + dbr_name)
+            mainapp.gaSet['dbr_name'] = dbr_name
+        else:
+            DialogBox(mainapp, db_dict={'title': "Get DBR Name fail", 'type': ['OK'], 'message': dbr_name,
+                                                     'icon': '::tk::icons::error'}).show()
+            return False
+
+        # res, mrkt_name = gen.get_mrkt_name(id_number)
+        res, dicti = ws.retrieve_mkt_name(id_number)
+        mrkt_name = dicti['MKT Item']
+        print(f'bind_uutId_entry res:{res} mrkt_name:{mrkt_name}')
+        if res:
+            mainapp.gaSet['mrkt_name'] = mrkt_name
+        else:
+            DialogBox(mainapp, db_dict={'title': "Get Marketing Name fail", 'type': ['OK'], 'message': mrkt_name,
+                                                     'icon': '::tk::icons::error'}).show()
+            return False
+
+        # res, csl = gen.get_csl_name(id_number)
+        res, dicti = ws.retrieve_csl(id_number)
+        csl = dicti['CSL']
+        print(f'bind_uutId_entry res:{res} csl:{csl}')
+        if res:
+            mainapp.gaSet['csl'] = csl
+        else:
+            DialogBox(mainapp, db_dict={'title': "Get CSL fail", 'type': ['OK'], 'message': csl,
+                                        'icon': '::tk::icons::error'}).show()
+            return False
+
+        mainapp.gaSet['id_number'] = id_number
+        print(f'bind_uutId_entry mainapp.gaSet:{mainapp.gaSet}')
+
+        ret = gen.retrive_dut_fam()
 
 
 class StatusBarFrame(tk.Frame):

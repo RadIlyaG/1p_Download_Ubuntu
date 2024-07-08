@@ -392,7 +392,7 @@ class WebServices:
         self.dict_val = 'MKT Item'
         self.in_par = id_barcode
         partial_url = self.dict_key + '?barcode=' + id_barcode + '&traceabilityID=null'
-        self.param_name = 'MKT Item'
+        self.param_name = 'Marketing Name'
 
         res, url = self.connect('MKTItem4Barcode')
         if res:

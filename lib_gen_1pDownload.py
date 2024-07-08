@@ -5,6 +5,8 @@ import subprocess
 import socket
 import json
 
+# import lib_radapps_1pDownload as radapps
+
 
 class Gen:
     def __init__(self):
@@ -119,6 +121,7 @@ class Gen:
         gui_num = appwin.gaSet['gui_num']
         Path(host).mkdir(parents=True, exist_ok=True)
         ini_file = Path(os.path.join(host, "init." + str(gui_num) + ".json"))
+        print(f'save_init host:<{host}>, pwd:<{os.getcwd()}>, ini_file:<{ini_file}>')
 
         di = {}
         try:
@@ -139,6 +142,31 @@ class Gen:
     def get_xy(self, top):
         print('get_xy', top)
         return str("+" + str(top.winfo_x()) + "+" + str(top.winfo_y()))
+
+    def ne_get_dbr_name(self, id_number):
+        ws = radapps.WebServices()
+        ws.print_rtext = False
+        res, dicti = ws.retrieve_oi4barcode(id_number)
+        print(f'get_dbr_name res:<{res}> dicti:<{dicti}>')
+        return res, dicti['item']
+
+    def ne_get_mrkt_name(self, id_number):
+        ws = radapps.WebServices()
+        ws.print_rtext = False
+        res, dicti = ws.retrieve_mkt_name(id_number)
+        print(f'get_mrkt_name res:<{res}> dicti:<{dicti}>')
+        return res, dicti['MKT Item']
+
+    def ne_get_csl_name(self, id_number):
+        ws = radapps.WebServices()
+        ws.print_rtext = False
+        res, dicti = ws.retrieve_csl(id_number)
+        print(f'get_csl_name res:<{res}> dicti:<{dicti}>')
+        return res, dicti['CSL']
+
+    def retrive_dut_fam(self):
+        return True
+
     
 class Ramzor:
     def __init__(self):
