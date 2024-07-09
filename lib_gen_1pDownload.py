@@ -208,6 +208,7 @@ class Gen:
 
         if sf in ['ETX-1P', 'ETX-1P_SFC']:
             box = 'etx'
+            uut_opt = 'ETX'
             ps_ma = re.search(r'1P/([A-Z0-9]+)/', dbr_name)
             if ps_ma is None:
                 ps_ma = re.search(r'1P_SFC/([A-Z0-9]+)/', dbr_name)
@@ -217,6 +218,7 @@ class Gen:
         else:
             box = re.search(r'P[_A-Z]*/(E[R\d]?)/', dbr_name).group(1)
             ps = re.search(r'E[R\d]?/([A-Z0-9]+)/', dbr_name).group(1)
+            uut_opt = 'SF'
 
             wanPorts_ma = re.search(r'/(2U)/', dbr_name)
             if wanPorts_ma is None:
@@ -228,6 +230,7 @@ class Gen:
 
         mainapp.gaSet['box'] = box
         mainapp.gaSet['ps'] = ps
+        mainapp.gaSet['uut_opt'] = uut_opt
         mainapp.gaSet['wanPorts'] = wanPorts
         mainapp.gaSet['lanPorts'] = lanPorts
         # if box in fields:

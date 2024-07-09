@@ -1,9 +1,15 @@
+import re
+
 class Main:
-    def __init__(self, mainapp):
-        self.tests = ["Ubdate_UBoot", 'Set_Env', 'Download_FlashImage',
-                     'Eeprom', 'Run_BootNet', 'ID']
+    def __init__(self):
+        pass
 
-        if mainapp.uut_opt != 'ETX1P':
-            self.tests += 'MicroSD'
+    def build_tests(self, mainapp):
+        self.tests = ["Secure_UBoot", 'Set_Env', 'Eeprom', 'Run_BootNet', 'ID']
 
-        self.tests += 'SOC_Flash_Memory', 'SOC_i2C'
+        if mainapp.gaSet['uut_opt'] != 'ETX':
+            self.tests += ['MicroSD']
+
+        self.tests += 'SOC_Flash_Memory', 'SOC_i2C', 'Front_Panel_Leds'
+
+        mainapp.start_from_combobox(self.tests, self.tests[0])

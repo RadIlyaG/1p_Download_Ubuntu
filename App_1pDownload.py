@@ -24,7 +24,7 @@ import socket
 import lib_gen_1pDownload as lib_gen
 import lib_radapps_1pDownload as radapps
 import test_my_procs as tmp
-# import Main_1pDownload as main
+import main_1pDownload as main
 
 
 class App(tk.Tk):
@@ -373,6 +373,9 @@ class BarcodesFrame(tk.Frame):
         self.ent_main_id.select_range(0, tk.END)
         mainapp.status_bar_frame.status('Ready')
         self.lab_uut_dbr.config(text=dbr_name)  #  width=len(dbr_name)+4
+
+        main_obj = main.Main()
+        main_obj.build_tests(mainapp)
 
     def bind_mainId_entry(self, mainapp, *event):
         gen = lib_gen.Gen()
