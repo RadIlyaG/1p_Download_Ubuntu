@@ -1,4 +1,4 @@
 {
-  "comDut": "COM1",
-  "pioBoxSerNum": "FT31CTG9"
+  "comDut": "ttyUSB3",
+  "pioBoxSerNum": "PWR"
 }

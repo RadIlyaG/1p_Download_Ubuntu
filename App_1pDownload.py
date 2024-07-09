@@ -23,6 +23,7 @@ import socket
 
 import lib_gen_1pDownload as lib_gen
 import lib_radapps_1pDownload as radapps
+import test_my_procs as tmp
 # import Main_1pDownload as main
 
 
@@ -246,6 +247,7 @@ class BarcodesFrame(tk.Frame):
         self.parent = parent
 
         self.put_widgets(mainapp)
+        self.uut_id.set('test_retrive_dut_family')
         
     def put_widgets(self, mainapp):
         self.barcode_widgets = []
@@ -295,13 +297,19 @@ class BarcodesFrame(tk.Frame):
                    sticky='w')
 
     def bind_uutId_entry(self, mainapp, *event):
-        print(f'bind_uutId_entry self:{self} mainapp:{mainapp} event:{event}')
+        gen = lib_gen.Gen()
+        print(f'\n{gen.my_time()}bind_uutId_entry self:{self} mainapp:{mainapp} event:{event}')
         id_number = self.uut_id.get()
         print(f'bind_uutId_entry id_number:{id_number}')
+
+        if id_number == 'test_retrive_dut_family':
+            tmp.test_retrive_dut_family(mainapp)
+            return None
+
         mainapp.start_from_combobox([], '')
         mainapp.status_bar_frame.status(f'Getting data for {id_number}')
 
-        gen = lib_gen.Gen()
+
         ws = radapps.WebServices()
         ws.print_rtext = False
 
@@ -325,7 +333,7 @@ class BarcodesFrame(tk.Frame):
         else:
             DialogBox(mainapp, db_dict={'title': "Get Marketing Name fail", 'type': ['OK'], 'message': mrkt_name,
                                                      'icon': '::tk::icons::error'}).show()
-            return False
+            #return False
 
         # res, csl = gen.get_csl_name(id_number)
         res, dicti = ws.retrieve_csl(id_number)
@@ -339,9 +347,10 @@ class BarcodesFrame(tk.Frame):
             return False
 
         mainapp.gaSet['id_number'] = id_number
-        print(f'bind_uutId_entry mainapp.gaSet:{mainapp.gaSet}')
+        #print(f'bind_uutId_entry mainapp.gaSet:{mainapp.gaSet}')
 
-        ret = gen.retrive_dut_fam()
+        ret = gen.retrive_dut_fam(mainapp)
+        print(f'bind_uutId_entry m ret_retrive_dut_fam:{ret}ainapp.gaSet:{mainapp.gaSet}')
 
 
 class StatusBarFrame(tk.Frame):
