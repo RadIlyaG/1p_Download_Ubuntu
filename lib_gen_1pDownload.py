@@ -8,7 +8,7 @@ import socket
 import json
 import webbrowser
 
-# import lib_radapps_1pDownload as radapps
+import lib_radapps_1pDownload as radapps
 
 
 class Gen:
@@ -380,11 +380,26 @@ class Gen:
 
         # mainapp.gaSet['fields'] = fields
 
-        print(f'retrive dut fam {mainapp.gaSet}')
+        # print(f'retrive dut fam {mainapp.gaSet}')
         # print(f'dbr_name:{dbr_name} fields:{fields}')
 
         return True
 
+    def get_dbr_sw(self, mainapp):
+        gswv = radapps.GetSWVersions()
+        id_number = mainapp.gaSet['id_number']
+        res, sw_l = gswv.gets_sw(id_number)
+        print(res, sw_l)
+        mainapp.gaSet['sw_boot'] = None
+        mainapp.gaSet['sw_app'] = None
+        for sw in sw_l:
+            ver = sw['version']
+            if ver[0] == 'B':
+                mainapp.gaSet['sw_boot'] = ver
+            else:
+                mainapp.gaSet['sw_app'] = ver
+        print(f'get dbr sw {mainapp.gaSet}')
+        return res
 
 class Ramzor:
     def __init__(self):

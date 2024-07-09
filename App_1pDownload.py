@@ -247,45 +247,49 @@ class BarcodesFrame(tk.Frame):
         self.parent = parent
 
         self.put_widgets(mainapp)
-        self.uut_id.set('test_retrive_dut_family')
+        self.uut_id.set('DC1002325824')
+        self.ent_uut_id.select_range(0, tk.END)
+        self.ent_uut_id.focus_set()
         
     def put_widgets(self, mainapp):
         self.barcode_widgets = []
         self.lab_uut_id = ttk.Label(self, text='UUT ID:')
         self.barcode_widgets.append(self.lab_uut_id)
-
         self.uut_id = tk.StringVar()
-        self.ent_uut_id = ttk.Entry(self, textvariable=self.uut_id, width=20)
+        self.ent_uut_id = ttk.Entry(self, textvariable=self.uut_id, justify="center")
         self.ent_uut_id.bind('<Return>', partial(self.bind_uutId_entry, mainapp))
         self.barcode_widgets.append(self.ent_uut_id)
-
-        self.lab_uut_dbr = ttk.Label(self, width=22, relief=tk.GROOVE)
+        self.lab_uut_dbr = ttk.Label(self, width=40, relief=tk.GROOVE)
         self.barcode_widgets.append(self.lab_uut_dbr)
 
+        self.main_id = tk.StringVar()
         self.lab_main_id = ttk.Label(self, text='PCB_MAIN ID:')
         self.barcode_widgets.append(self.lab_main_id)
-        self.ent_main_id = ttk.Entry(self)
+        self.ent_main_id = ttk.Entry(self, textvariable=self.main_id, justify="center")
+        self.ent_main_id.bind('<Return>', partial(self.bind_mainId_entry, mainapp))
         self.barcode_widgets.append(self.ent_main_id)
         self.lab_main_dbr = ttk.Label(self, width=16, relief=tk.GROOVE)
         self.barcode_widgets.append(self.lab_main_dbr)
 
+        self.sub1_id = tk.StringVar()
         self.lab_sub1_id = ttk.Label(self, text='PCB_SUB_CARD_1 ID:')
         self.barcode_widgets.append(self.lab_sub1_id)
-        self.ent_sub1_id = ttk.Entry(self)
+        self.ent_sub1_id = ttk.Entry(self, textvariable=self.sub1_id, justify="center")
+        self.ent_sub1_id.bind('<Return>', partial(self.bind_sub1Id_entry, mainapp))
         self.barcode_widgets.append(self.ent_sub1_id)
         self.lab_sub1_dbr = ttk.Label(self, width=16, relief=tk.GROOVE)
         self.barcode_widgets.append(self.lab_sub1_dbr)
 
         self.lab_ha_id = ttk.Label(self, text='Hardware Addition:')
         self.barcode_widgets.append(self.lab_ha_id)
-        self.lab_ha_val = ttk.Label(self, width=16, relief=tk.GROOVE)
+        self.lab_ha_val = ttk.Label(self, width=16, relief=tk.GROOVE, anchor="center")
         self.barcode_widgets.append(self.lab_ha_val)
         self.lab_ha_0 = ttk.Label(self)
         self.barcode_widgets.append(self.lab_ha_0)
 
         self.lab_csl_id = ttk.Label(self, text='CSL:')
         self.barcode_widgets.append(self.lab_csl_id)
-        self.lab_csl_val = ttk.Label(self, width=16, relief=tk.GROOVE)
+        self.lab_csl_val = ttk.Label(self, width=16, relief=tk.GROOVE, anchor="center")
         self.barcode_widgets.append(self.lab_csl_val)
         self.lab_csl_0 = ttk.Label(self)
         self.barcode_widgets.append(self.lab_csl_0)
@@ -295,6 +299,8 @@ class BarcodesFrame(tk.Frame):
             w.grid(row=self.barcode_widgets.index(w)//3, 
                    column=self.barcode_widgets.index(w)%3, 
                    sticky='w')
+
+
 
     def bind_uutId_entry(self, mainapp, *event):
         gen = lib_gen.Gen()
@@ -308,7 +314,6 @@ class BarcodesFrame(tk.Frame):
 
         mainapp.start_from_combobox([], '')
         mainapp.status_bar_frame.status(f'Getting data for {id_number}')
-
 
         ws = radapps.WebServices()
         ws.print_rtext = False
@@ -349,8 +354,62 @@ class BarcodesFrame(tk.Frame):
         mainapp.gaSet['id_number'] = id_number
         #print(f'bind_uutId_entry mainapp.gaSet:{mainapp.gaSet}')
 
-        ret = gen.retrive_dut_fam(mainapp)
-        print(f'bind_uutId_entry m ret_retrive_dut_fam:{ret}ainapp.gaSet:{mainapp.gaSet}')
+        res = gen.retrive_dut_fam(mainapp)
+        print(f'bind_uutId_entry res_retrive_dut_fam:{res}')
+        if res != True:
+            DialogBox(mainapp, db_dict={'title': "Retrive UUT family fail", 'type': ['OK'],
+                                        'message': "Retrive UUT family fail",
+                                        'icon': '::tk::icons::error'}).show()
+            mainapp.status_bar_frame.status(f'Retrive UUT family fail for {id_number}', 'red')
+            return False
+
+        res = gen.get_dbr_sw(mainapp)
+        print(f'bind_uutId_entry res of get_dbr_sw:{res}')
+
+        self.lab_csl_val.config(text=mainapp.gaSet['csl'])
+
+        self.ent_main_id.focus_set()
+        self.main_id.set('')
+        self.ent_main_id.select_range(0, tk.END)
+        mainapp.status_bar_frame.status('Ready')
+        self.lab_uut_dbr.config(text=dbr_name)  #  width=len(dbr_name)+4
+
+    def bind_mainId_entry(self, mainapp, *event):
+        gen = lib_gen.Gen()
+        ws = radapps.WebServices()
+        ws.print_rtext = False
+
+        print(f'\n{gen.my_time()}bind_mainId_entry self:{self} mainapp:{mainapp} event:{event}')
+        barcode = self.main_id.get()
+        res, dicti = ws.retrieve_traceId_data(barcode)
+        # print(res, type(dicti))
+        if res:
+            # print(dicti['pcb'])
+            self.lab_main_dbr.config(text=dicti['pcb'])
+            mainapp.gaSet['main_pcb'] = dicti['pcb']
+            self.ent_sub1_id.focus_set()
+            self.sub1_id.set('')
+            self.ent_sub1_id.select_range(0, tk.END)
+        else:
+            print(dicti)
+        return res
+
+    def bind_sub1Id_entry(self, mainapp, *event):
+        gen = lib_gen.Gen()
+        ws = radapps.WebServices()
+        ws.print_rtext = False
+
+        print(f'\n{gen.my_time()}bind_subId_entry self:{self} mainapp:{mainapp} event:{event}')
+        barcode = self.sub1_id.get()
+        res, dicti = ws.retrieve_traceId_data(barcode)
+        # print(res, type(dicti))
+        if res:
+            print(dicti['pcb'])
+            self.lab_sub1_dbr.config(text=dicti['pcb'])
+            mainapp.gaSet['sub1_pcb'] = dicti['pcb']
+        else:
+            print(dicti)
+        return res
 
 
 class StatusBarFrame(tk.Frame):
