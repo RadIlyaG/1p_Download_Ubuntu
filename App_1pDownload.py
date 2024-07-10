@@ -20,6 +20,8 @@ from PIL import Image, ImageTk
 import tkinter as tk
 from tkinter import ttk
 import socket
+from datetime import datetime
+from pathlib import Path
 
 import lib_gen_1pDownload as lib_gen
 import lib_radapps_1pDownload as radapps
@@ -72,6 +74,8 @@ class App(tk.Tk):
     def quit(self):
         print('quit', self)
         self.gen.save_init(self)
+        gen = lib_gen.Gen()
+        gen.play_sound('info.wav')
         db_dict = {
             "title": "Confirm exit",
             "message": "Are you sure you want to close the application?",
@@ -176,6 +180,7 @@ class MainFrame(tk.Frame):
     def put_widgets(self):
         pass
         
+
 class StartFromFrame(tk.Frame):
     '''Create the StartFrom Frame on base of tk.Frame'''
     def __init__(self, parent, mainapp):
@@ -185,30 +190,93 @@ class StartFromFrame(tk.Frame):
         self['relief'] = self.master['relief']
         self['bd'] = self.master['bd']
         self.put_widgets()
+        self.mainapp = mainapp
 
     def put_widgets(self):
         self.lab_start_from = ttk.Label(self, text="Start from ")
 
         self.var_start_from = tk.StringVar()
-        self.cb_start_from = ttk.Combobox(self, justify='center', width=35, textvariable=self.var_start_from)
+        self.cb_start_from = ttk.Combobox(self, justify='center', width=20, textvariable=self.var_start_from)
 
         script_dir = os.path.dirname(__file__)
         self.img = Image.open(os.path.join(script_dir, "images", "run1.gif"))
         use_img = ImageTk.PhotoImage(self.img)
-        self.b_start = ttk.Button(self, text="Start", image=use_img)
+        self.b_start = ttk.Button(self, text="Start", image=use_img, command=partial(self.button_run))
         self.b_start.image = use_img
 
         self.img = Image.open(os.path.join(script_dir, "images", "stop1.gif"))
         use_img = ImageTk.PhotoImage(self.img)
         self.b_stop = ttk.Button(self, text="Stop", image=use_img)
         self.b_start.b_stop = use_img
+
+        self.lab_curr_test = ttk.Label(self, text='Current Test:')
+        self.var_curr_test = tk.StringVar()
+        self.lab_curr_test_val = ttk.Label(self, width=20, relief=tk.SUNKEN, anchor="center", textvariable=self.var_curr_test)
         
         self.lab_start_from.pack(side='left', padx='2')
         self.cb_start_from.pack(side='left', padx='2')
         self.b_start.pack(side='left', padx='2')
         self.b_stop.pack(side='left', padx='2')
+        self.lab_curr_test.pack(side='left', padx='2')
+        self.lab_curr_test_val.pack(side='left', padx='2')
 
-    
+    def button_run(self):
+        gen = lib_gen.Gen()
+        print(f'\n{gen.my_time()} button_run1 mainapp:{self.mainapp}, {self.mainapp.gaSet}')
+        self.mainapp.status_bar_frame.status('')
+        self.mainapp.gaSet['act'] = 1
+        self.b_start.state(["pressed", "disabled"])
+        self.b_stop.state(["!pressed", "!disabled"])
+
+        now = datetime.now()
+        self.mainapp.gaSet['log_time'] = now.strftime("%Y.%m.%d-%H.%M.%S")
+
+        logs = f'{os.path.dirname(os.getcwd())}/logs'
+        Path(logs).mkdir(parents=True, exist_ok=True)
+        gui_num = self.mainapp.gaSet['gui_num']
+
+        res = True
+        self.mainapp.gaSet['emp_numb'] = '114965'
+        self.mainapp.gaSet['emp_name'] = 'KOBY LAZARY'
+        if res:
+            self.mainapp.gaSet['log'] = f"{logs}/{self.mainapp.gaSet['log_time']}_{gui_num}_{self.mainapp.gaSet['id_number']}.txt"
+            gen.add_to_log(self.mainapp, f"{self.mainapp.gaSet['id_number']} {self.mainapp.gaSet['dbr_name']}")
+            gen.add_to_log(self.mainapp, f"Main Board: {self.mainapp.gaSet['main_trace']} {self.mainapp.gaSet['main_pcb']}")
+            if self.mainapp.gaSet['sub1_trace']:
+                gen.add_to_log(self.mainapp, f"Sub1 Board: {self.mainapp.gaSet['sub1_trace']} {self.mainapp.gaSet['sub1_pcb']}")
+            gen.add_to_log(self.mainapp, f"DBR Name: {self.mainapp.gaSet['dbr_name']}")
+            gen.add_to_log(self.mainapp,
+                               f"Employee Number: {self.mainapp.gaSet['emp_numb']}, Name: {self.mainapp.gaSet['emp_name']}")
+            gen.add_to_log(self.mainapp, '\n')
+
+            tests = self.mainapp.tests
+            # fst_tst = test_names_lst.index(Toolbar.var_start_from.get())
+            fst_tst = self.mainapp.main_frame.frame_start_from.var_start_from.get()
+            print(f'button_run4 fst_tst:{fst_tst} ltests:{tests}')
+
+            main_obj = main.Main()
+            for tst in tests:
+                tst = tst.split('..')[1]
+                gen.add_to_log(self.mainapp, f"Start of {tst}")
+                self.var_curr_test.set(tst)
+                print(f'\n{gen.my_time()} Start of {tst}')
+                self.mainapp.gaSet['root'].update()
+                ret = getattr(main_obj, tst)(self.mainapp)
+                if ret != 0:
+                    if ret == -2:
+                        self.mainapp.gaSet['fail'] = "User Stop"
+                    ret_txt = f"Fail. Reason: {self.mainapp.gaSet['fail']}"
+                else:
+                    ret_txt = 'Pass'
+                print(f'Ret of Test {tst}:{ret}')
+                gen.add_to_log(self.mainapp, f"End of {tst}, result: {ret_txt}\n")
+                if ret != 0:
+                    break
+
+        self.b_start.state(["!pressed", "!disabled"])
+        self.b_stop.state(["pressed", "disabled"])
+
+
 class InfoFrame(tk.Frame):
     '''Create the Info Frame on base of tk.Frame'''
     def __init__(self, parent, mainapp):
@@ -247,9 +315,13 @@ class BarcodesFrame(tk.Frame):
         self.parent = parent
 
         self.put_widgets(mainapp)
-        self.uut_id.set('DC1002325824')
+        self.uut_id.set('DC1002333717')
+        # self.main_id.set('21341063')
         self.ent_uut_id.select_range(0, tk.END)
         self.ent_uut_id.focus_set()
+
+        mainapp.gaSet['main_trace'] = False
+        mainapp.gaSet['sub1_trace'] = False
         
     def put_widgets(self, mainapp):
         self.barcode_widgets = []
@@ -259,7 +331,7 @@ class BarcodesFrame(tk.Frame):
         self.ent_uut_id = ttk.Entry(self, textvariable=self.uut_id, justify="center")
         self.ent_uut_id.bind('<Return>', partial(self.bind_uutId_entry, mainapp))
         self.barcode_widgets.append(self.ent_uut_id)
-        self.lab_uut_dbr = ttk.Label(self, width=40, relief=tk.GROOVE)
+        self.lab_uut_dbr = ttk.Label(self, width=40, relief=tk.GROOVE, anchor="center")
         self.barcode_widgets.append(self.lab_uut_dbr)
 
         self.main_id = tk.StringVar()
@@ -268,7 +340,7 @@ class BarcodesFrame(tk.Frame):
         self.ent_main_id = ttk.Entry(self, textvariable=self.main_id, justify="center")
         self.ent_main_id.bind('<Return>', partial(self.bind_mainId_entry, mainapp))
         self.barcode_widgets.append(self.ent_main_id)
-        self.lab_main_dbr = ttk.Label(self, width=16, relief=tk.GROOVE)
+        self.lab_main_dbr = ttk.Label(self, width=16, relief=tk.GROOVE, anchor="center")
         self.barcode_widgets.append(self.lab_main_dbr)
 
         self.sub1_id = tk.StringVar()
@@ -277,7 +349,7 @@ class BarcodesFrame(tk.Frame):
         self.ent_sub1_id = ttk.Entry(self, textvariable=self.sub1_id, justify="center")
         self.ent_sub1_id.bind('<Return>', partial(self.bind_sub1Id_entry, mainapp))
         self.barcode_widgets.append(self.ent_sub1_id)
-        self.lab_sub1_dbr = ttk.Label(self, width=16, relief=tk.GROOVE)
+        self.lab_sub1_dbr = ttk.Label(self, width=16, relief=tk.GROOVE, anchor="center")
         self.barcode_widgets.append(self.lab_sub1_dbr)
 
         self.lab_ha_id = ttk.Label(self, text='Hardware Addition:')
@@ -376,6 +448,7 @@ class BarcodesFrame(tk.Frame):
 
         main_obj = main.Main()
         main_obj.build_tests(mainapp)
+        mainapp.tests = main_obj.tests
 
     def bind_mainId_entry(self, mainapp, *event):
         gen = lib_gen.Gen()
@@ -393,6 +466,7 @@ class BarcodesFrame(tk.Frame):
             self.ent_sub1_id.focus_set()
             self.sub1_id.set('')
             self.ent_sub1_id.select_range(0, tk.END)
+            mainapp.gaSet['main_trace'] = barcode
         else:
             print(dicti)
         return res
@@ -410,6 +484,7 @@ class BarcodesFrame(tk.Frame):
             print(dicti['pcb'])
             self.lab_sub1_dbr.config(text=dicti['pcb'])
             mainapp.gaSet['sub1_pcb'] = dicti['pcb']
+            mainapp.gaSet['sub1_trace'] = barcode
         else:
             print(dicti)
         return res
