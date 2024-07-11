@@ -118,3 +118,9 @@ class Main:
         ser.close()
 
         return ret
+    
+    def Eeprom(self):
+        gen = lib_gen.Gen()
+        ret = gen.build_eeprom_string()
+        return ret
+

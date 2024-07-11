@@ -383,6 +383,8 @@ class BarcodesFrame(tk.Frame):
         self.ent_uut_id.select_range(0, tk.END)
         self.ent_uut_id.focus_set()
 
+        mainapp.gaSet['main_pcb'] = False
+        mainapp.gaSet['sub1_pcb'] = False
         mainapp.gaSet['main_trace'] = False
         mainapp.gaSet['sub1_trace'] = False
         

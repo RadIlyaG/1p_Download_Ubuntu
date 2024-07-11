@@ -176,7 +176,7 @@ class MacReg:
         if data['Error']=='0':
             res = True
         else:
-            ret = False
+            res = False
         new_mac = data['New_MAC_Address']
         #print(f'data:<{data["sp001_mac_address_alloc"][0]}>')
         return res, (new_mac, qty)

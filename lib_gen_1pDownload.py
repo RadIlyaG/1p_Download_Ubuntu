@@ -426,7 +426,237 @@ class Gen:
         #     print(f'returncode:<{process.returncode}>')
         subprocess.Popen([f'aplay /home/ilya/Wav/{sound}'], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, text=True)
+        
+    def build_eeprom_string(self, mainapp):
+        print(f'\n{self.my_time} Build EEprom String')
 
+        cell_type = mainapp.gaSet['cellType']
+        cell_qty = mainapp.gaSet['cellQty'] 
+        wifi = mainapp.gaSet['wifi']
+        lora = mainapp.gaSet['lora']
+
+        if cell_qty == 'NotExists' and wifi == 'NotExists' and lora == 'NotExists':
+            print("### #no modems, no wifi, no lora")
+            mod1man = ""
+            mod1type = ""
+            mod2man = ""
+            mod2type = ""
+        elif cell_qty == 1 and wifi == 'NotExists' and lora == 'NotExists':
+            print("#### just modem 1, no modem 2 and no wifi, no lora")
+            mod1man = self.modem_manuf(cell_type)
+            mod1type = self.modem_type(cell_type, lora)
+            mod2man = ""
+            mod2type = ""
+        elif cell_qty == 1 and wifi != 'NotExists':
+            print("#### modem 1 and wifi instead of modem 2")
+            mod1man = self.modem_manuf(cell_type)
+            mod1type = self.modem_type(cell_type, lora)
+            mod2man = self.modem_manuf(wifi)
+            mod2type = self.modem_type(wifi, lora)
+        elif cell_qty == 'NotExists' and wifi != 'NotExists':
+            print("#### mo modem 1 and wifi instead of modem 2")
+            mod1man = ""
+            mod1type = ""
+            mod2man = self.modem_manuf(wifi)
+            mod2type = self.modem_type(wifi, lora)
+        elif cell_qty == 2:
+            print("#### two modems are installed")
+            mod1man = self.modem_manuf(cell_type)
+            mod1type = self.modem_type(cell_type, lora)
+            mod2man = self.modem_manuf(cell_type)
+            mod2type = self.modem_type(cell_type, lora)
+        elif cell_qty == 1 and lora != 'NotExists':
+            print("#### modem 1 and LoRa instead of modem 2")
+            mod1man = self.modem_manuf(cell_type)
+            mod1type = self.modem_type(cell_type, lora)
+            mod2man = self.modem_manuf('lora')
+            mod2type = self.modem_type('lora', lora)
+        elif cell_qty == 'NotExists' and lora != 'NotExists':
+            print("#### no modem 1 and LoRa instead of modem 1")
+            mod1man = self.modem_manuf('lora')
+            mod1type = self.modem_type('lora', lora)
+            mod2man = ''
+            mod2type = ''
+
+        res, mac = self.get_mac()
+        if res is not True:
+            mainapp.gaSet['fail'] = "Get MACs Fail"
+            return -1
+        
+        ma = re.search(r'REV([\d\.]+)\w', mainapp.gaSet['main_pcb'])
+        main_pcb_rev = float(ma.group(1))
+        if mainapp.gaSet['ps'] == 'ACEX':
+            ps = '12V'
+        elif mainapp.gaSet['ps'] == 'DC' and main_pcb_rev <= 0.5:
+            ps = '12V'
+        elif mainapp.gaSet['ps'] == 'DC' and main_pcb_rev > 0.5:
+            ps = 'DC'
+        elif mainapp.gaSet['ps'] == 'WDC':
+            ps = 'WDC-I'
+        elif mainapp.gaSet['ps'] == '12V':
+            ps = '12V-I'
+        elif mainapp.gaSet['ps'] == 'D72V':
+            ps = 'D72V-I'
+        elif mainapp.gaSet['ps'] == 'FDC':
+            ps = 'FDC-I'
+        elif mainapp.gaSet['ps'] == 'RDC':
+            ps = 'RDC-I'
+
+        serial = mainapp.gaSet['serPort']
+        if serial == 'NotExists':
+            ser1 = ''
+            ser2 = ''
+            s1rs485 = ''
+            s2rs485 = ''
+            s1cts = ''
+            s2cts = ''
+        elif serial in ['2RS', '2RSI']:
+            ser1 = 'RS232'
+            ser2 = 'RS232'
+            s1rs485 = ''
+            s2rs485 = ''
+            s1cts = 'YES'
+            s2cts = 'YES'
+        elif serial in ['2RSM', '2RMI']:
+            ser1 = 'RS485'
+            ser2 = 'RS232'
+            s1rs485 = '2W'
+            s2rs485 = ''
+            s1cts = 'YES'
+            s2cts = 'YES'
+        elif serial in ['1RS']:
+            ser1 = 'RS232'
+            ser2 = ''
+            s1rs485 = ''
+            s2rs485 = ''
+            s1cts = 'YES'
+            s2cts = ''
+
+        ee_str = ''
+        ee_str += f'MODEM_1_MANUFACTURER={mod1man},'
+        ee_str += f'MODEM_2_MANUFACTURER={mod2man},'
+        ee_str += f'MODEM_1_TYPE={mod1type},'
+        ee_str += f'MODEM_2_TYPE={mod1type},'
+        ee_str += f'MAC_ADDRESS={mac},'
+
+        ee_str += f'MAIN_CARD_HW_VERSION={main_pcb_rev},'
+
+        if main_pcb_rev < 0.6:
+            sub1_pcb_rev = ''
+            hwAdd = 'A'
+            sub1_pcb = ''
+        else:
+            hwAdd = 'C'
+            if (main_pcb_rev == 0.6 and
+                    mainapp.gaSet['dbr_name'] in ['SF-1P/E1/DC/4U2S/2RSM/5G/2R',
+                                                  'SF-1P/E1/DC/4U2S/2RSM/5G/G/LRB/2R',
+                                                  'SF-1P/E1/DC/4U2S/2RSM/5G/LRA/2R']):
+                hwAdd = 'C'   
+            if mainapp.gaSet['sub1_pcb']:
+                ma = re.search(r'REV([\d\.]+)\w', mainapp.gaSet['sub1_pcb'])
+                sub1_pcb_rev = float(ma.group(1))
+                sub1_pcb = mainapp.gaSet['sub1_pcb']
+            else:
+                sub1_pcb_rev = ''
+                sub1_pcb = ''
+
+        ee_str += f'SUB_CARD_1_HW_VERSION={sub1_pcb_rev},'
+        ee_str += f'HARDWARE_ADDITION={hwAdd},'
+        ee_str += f'CSL={mainapp.gaSet['csl']},'
+        ee_str += f'PART_NUMBER={mainapp.gaSet['mrkt_name']},'
+        ee_str += f'PCB_MAIN_ID={mainapp.gaSet['main_pcb']},'
+        ee_str += f'PCB_SUB_CARD_1_ID={sub1_pcb},'
+        ee_str += f'PS={ps},'
+        if re.search('/HL', mainapp.gaSet['dbr_name']) or re.search('ETX', mainapp.gaSet['dbr_name']):
+            ee_str += f'SD_SLOT="",'
+        else:
+            ee_str += f'SD_SLOT=YES,'
+        ee_str += f'SERIAL_1={ser1},'
+        ee_str += f'SERIAL_2={ser2},'
+        ee_str += f'SERIAL_1_CTS_DTR={s1cts},'
+        ee_str += f'SERIAL_2_CTS_DTR={s2cts},'
+        ee_str += f'RS485_1={s1rs485},'
+        ee_str += f'RS485_2={s2rs485},'
+        
+        if re.search('ETX', mainapp.gaSet['dbr_name']:
+            ee_str += f'DRY_CONTACT_IN_OUT="",'
+        else:
+        ee_str += f'DRY_CONTACT_IN_OUT="2_2",'
+
+        if mainapp.gaSet['wanPorts'] == "4U2S":
+            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=FIBER,LAN_3_4=YES'
+        elif mainapp.gaSet['wanPorts'] == "2U":
+            ee_str += f'NNI_WAN_1="",NNI_WAN_2="",LAN_3_4=""'
+        elif mainapp.gaSet['wanPorts'] == "5U1S":
+            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=FIBER,LAN_3_4=YES'
+        elif mainapp.gaSet['wanPorts'] == "1SFP1UTP":
+            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=COPPER,LAN_3_4=YES'
+        
+        ee_str += f'LIST_REF=0.0,END='
+
+        self.add_to_log(ee_str)
+
+        ee_file = Path(os.path.join(mainapp.gaSet['log'], "eeprom." + str(mainapp.gaSet['gui_num']) + ".txt"))
+        with open(ee_file, 'w+') as ee:
+            ee.write(ee_str)
+            
+        return 0
+  
+
+    def get_mac(self):
+        ws = radapps.MacReg()
+        if True:
+            res, (mac, qty) = True, ('112233445566', 0)
+        else:    
+            res, (mac,qty) = ws.mac_server(10)
+        ma = ':'.join(mac[i:i+2] for i in range(0, len(mac),2))
+        return res, ma
+
+    def modem_manuf(self, cell_type):
+        if cell_type in ['HSP', 'L1', 'L2', 'L3', 'L4', 'LG']:
+            return 'QUECTEL'
+        elif cell_type in ['WF']:
+            return 'AZUREWAVE'
+        elif cell_type in ['lora']:
+            return 'RAK'
+        elif cell_type in ['L450A']:
+            return 'Unitac'
+        elif cell_type in ['L450B']:
+            return 'Unitac'
+        elif cell_type in ['WH']:
+            return 'GATEWORKS'
+        elif cell_type in ['L4P']:
+            return 'Sequans'
+        elif cell_type in ['LTA', 'LTG']:
+            return 'Telit'
+        elif cell_type in ['5G']:
+            return 'SIERRA WIRELESS'
+
+    def modem_type(self, cell_type, lora):  
+        if cell_type == 'HSP': return 'UC20'
+        if cell_type == 'L1': return 'EC25-E'
+        if cell_type == 'L2': return 'EC25-A'
+        if cell_type == 'L3': return 'EC25-AU'
+        if cell_type == 'L4': return 'EC25-AFFD'
+        if cell_type == 'WF': return 'AW-CM276MA'
+        if cell_type == 'lora':
+            if lora == 'LR1': return 'EU433'
+            if lora == 'LR2': return 'RAK-5146'
+            if lora == 'LR3': return 'US915'
+            if lora == 'LR4': return 'US915'
+            if lora == 'LR6': return 'AS923'
+            if lora == 'LR7': return 'EU868'
+            if lora == 'LRA': return '9XX'
+            if lora == 'LRB': return '8XX'
+            if lora == 'LRC': return 'LRC'
+        if cell_type == 'L450A': return 'AML620EU'
+        if cell_type == 'L450B': return 'ML660PC'
+        if cell_type == '5G': return 'EM9191'
+        if cell_type == 'LG': return 'EC25-G'
+        if cell_type == 'WH': return 'GW16146'
+        if cell_type == 'L4P': return 'CA410M'
+        if cell_type == 'LTA': return 'MPLS83-X'
+        if cell_type == 'LTG': return 'MPLS83-W'
 
 
 class Ramzor:
