@@ -73,11 +73,18 @@ class Gen:
                 print(f'stdout:<{stdout}>, stderr:<{stderr}>, {process.returncode}')
 
             
-    def read_hw_init(self, gui_num, ip):
-        print(f'read_hw_init')
-        host = ip.replace('.', '_')
-        Path(host).mkdir(parents=True, exist_ok=True)
-        hw_file = Path(os.path.join(host, f"HWinit.{gui_num}.json"))
+    def read_hw_init(self, gui_num, host_fld):
+        print(f'\nread_hw_init, gui_num:{gui_num}, host_fld:{host_fld}')
+        # host = ip.replace('.', '_')
+        # woDir = os.getcwd()
+        # # host_fld = ''
+        # if '1p_download' in woDir:
+        #     host_fld = os.path.join(woDir, host)
+        # else:
+        #     host_fld = os.path.join(woDir, '1p_download', host)
+        # print(f'woDir:<{woDir}>host_fld:<{host_fld}>')
+        Path(host_fld).mkdir(parents=True, exist_ok=True)
+        hw_file = Path(os.path.join(host_fld, f"HWinit.{gui_num}.json"))
         if not os.path.isfile(hw_file):
             hw_dict = {
                 'comDut': 'ttyUSB0',
@@ -88,7 +95,8 @@ class Gen:
             with open(hw_file, 'w') as fi:
                 # json.dump(hw_dict, fi, indent=2, sort_keys=True)
                 json.dump(hw_dict, fi, indent=2, sort_keys=True)
-
+        else:
+            print(f'hw_file:{hw_file}')
         try:
             with open(hw_file, 'r') as fi:
                 hw_dict = json.load(fi)
@@ -97,14 +105,15 @@ class Gen:
             # raise(e)
             raise Exception("e")
 
+        print(f'hw_file: hw_dict{hw_dict}')
         return hw_dict
 
-    def read_init(self, appwin, gui_num, ip):
-        print(f'read_init, self:{self}, appwin:{appwin}, gui_num:{gui_num}, ip:{ip}')
+    def read_init(self, appwin, gui_num, host_fld):
+        print(f'read_init, self:{self}, appwin:{appwin}, gui_num:{gui_num}, host_fld:{host_fld}')
         # print(f'read_init script_dir {os.path.dirname(__file__)}')
-        host = ip.replace('.', '_')
-        Path(host).mkdir(parents=True, exist_ok=True)
-        ini_file = Path(os.path.join(host, "init." + str(gui_num) + ".json"))
+        # host = ip.replace('.', '_')
+        Path(host_fld).mkdir(parents=True, exist_ok=True)
+        ini_file = Path(os.path.join(host_fld, "init." + str(gui_num) + ".json"))
         if os.path.isfile(ini_file) is False:
             dicti = {
                 'geom': '+210+210'
@@ -127,6 +136,7 @@ class Gen:
         ip = appwin.gaSet['pc_ip']
         host = ip.replace('.', '_')
         gui_num = appwin.gaSet['gui_num']
+        host_fld = appwin.gaSet['host_fld']
         Path(host).mkdir(parents=True, exist_ok=True)
         ini_file = Path(os.path.join(host, "init." + str(gui_num) + ".json"))
         print(f'save_init host:<{host}>, pwd:<{os.getcwd()}>, ini_file:<{ini_file}>')

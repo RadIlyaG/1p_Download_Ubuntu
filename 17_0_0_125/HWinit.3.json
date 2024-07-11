@@ -1,4 +1,4 @@
 {
-  "comDut": "ttyUSB0",
+  "comDut": "ttyUSB3",
   "pioBoxSerNum": "PWR"
 }

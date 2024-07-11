@@ -43,8 +43,18 @@ class App(tk.Tk):
         ip = self.get_pc_ip()
         self.gaSet['gui_num'] = gui_num
         self.gaSet['pc_ip'] = ip
-        hw_dict = self.gen.read_hw_init(gui_num, ip)
-        ini_dict = self.gen.read_init(self, gui_num, ip)
+
+        host = ip.replace('.', '_')
+        woDir = os.getcwd()
+        if '1p_download' in woDir:
+            host_fld = os.path.join(woDir, host)
+        else:
+            host_fld = os.path.join(woDir, '1p_download', host)
+        print(f'woDir:<{woDir}>host_fld:<{host_fld}>')
+        self.gaSet['host_fld'] = host_fld
+
+        hw_dict = self.gen.read_hw_init(gui_num, host_fld)
+        ini_dict = self.gen.read_init(self, gui_num, host_fld)
         self.gaSet = {**hw_dict, **ini_dict}
         self.gaSet['gui_num'] = gui_num
         self.gaSet['pc_ip'] = ip
@@ -59,6 +69,7 @@ class App(tk.Tk):
         self.geometry(self.gaSet['geom'])
 
         self.status_bar_frame.status("Scan UUT barcode to start")
+        self.bind('<Alt-r>', partial(self.main_frame.frame_start_from.button_run))
         
     def put_frames(self):
         mainapp = self
@@ -220,7 +231,7 @@ class StartFromFrame(tk.Frame):
         self.lab_curr_test.pack(side='left', padx='2')
         self.lab_curr_test_val.pack(side='left', padx='2')
 
-    def button_run(self):
+    def button_run(self, *event):
         gen = lib_gen.Gen()
         print(f'\n{gen.my_time()} button_run1 mainapp:{self.mainapp}, {self.mainapp.gaSet}')
         self.mainapp.status_bar_frame.status('')
@@ -231,14 +242,19 @@ class StartFromFrame(tk.Frame):
         now = datetime.now()
         self.mainapp.gaSet['log_time'] = now.strftime("%Y.%m.%d-%H.%M.%S")
 
-        logs = f'{os.path.dirname(os.getcwd())}/logs'
+        woDir = os.getcwd()
+        if '1p_download' in woDir:
+            logs = f'{os.path.dirname(woDir)}/logs'
+        else:
+            logs = f'{woDir}/logs'
+        print(f'woDir:<{woDir}>logs:<{logs}>')
         Path(logs).mkdir(parents=True, exist_ok=True)
         gui_num = self.mainapp.gaSet['gui_num']
 
-        res = True
+        ret = 0
         self.mainapp.gaSet['emp_numb'] = '114965'
         self.mainapp.gaSet['emp_name'] = 'KOBY LAZARY'
-        if res:
+        if ret == 0:
             self.mainapp.gaSet['log'] = f"{logs}/{self.mainapp.gaSet['log_time']}_{gui_num}_{self.mainapp.gaSet['id_number']}.txt"
             gen.add_to_log(self.mainapp, f"{self.mainapp.gaSet['id_number']} {self.mainapp.gaSet['dbr_name']}")
             gen.add_to_log(self.mainapp, f"Main Board: {self.mainapp.gaSet['main_trace']} {self.mainapp.gaSet['main_pcb']}")
@@ -261,7 +277,12 @@ class StartFromFrame(tk.Frame):
                 self.var_curr_test.set(tst)
                 print(f'\n{gen.my_time()} Start of {tst}')
                 self.mainapp.gaSet['root'].update()
-                ret = getattr(main_obj, tst)(self.mainapp)
+                try:
+                    ret = getattr(main_obj, tst)(self.mainapp)
+                except Exception as e:
+                    ret = -1
+                    self.mainapp.gaSet['fail'] = e
+
                 if ret != 0:
                     if ret == -2:
                         self.mainapp.gaSet['fail'] = "User Stop"
@@ -273,8 +294,50 @@ class StartFromFrame(tk.Frame):
                 if ret != 0:
                     break
 
+        # After  Tests
+        self.mainapp.status_bar_frame.run_time("")
+        self.mainapp.gaSet['use_exist_barcode'] = 0
+        src = None
+        if 'log' in self.mainapp.gaSet:
+            src = Path(self.mainapp.gaSet['log'])
+        print(f'\n After Tests ret:{ret}')
+
+        if ret == 0:
+            wav = "pass.wav"
+            # main_obj.my_statusbar.sstatus("")
+            self.mainapp.status_bar_frame.status("Done", 'green')
+
+            dst = f'{os.path.splitext(src)[0]}-PASS{os.path.splitext(src)[1]}'
+            os.rename(src, dst)
+            run_status = 'Pass'
+        elif ret == 1:
+            wav = "info.wav"
+            self.mainapp.status_bar_frame.status("The test has been perform", 'yellow')
+        else:
+            run_status = 'Fail'
+            if ret == -2:
+                self.mainapp.gaSet['fail'] = 'User stop'
+                run_status = ''
+            elif ret == -3:
+                run_status = ''
+
+            self.mainapp.status_bar_frame.status(f"Test FAIL: {self.mainapp.gaSet['fail']}", 'red')
+            wav = "fail.wav"
+            if src and os.path.isfile(src):
+                dst = f'{os.path.splitext(src)[0]}-FAIL{os.path.splitext(src)[1]}'
+                os.rename(src, dst)
+
         self.b_start.state(["!pressed", "!disabled"])
         self.b_stop.state(["pressed", "disabled"])
+
+        try:
+            gen = lib_gen.Gen()
+            gen.play_sound(wav)
+        except Exception as e:
+            pass
+        finally:
+            # MenuBar.use_ex_barc.set(0)
+            print(f'ButRun finally: ret:{ret}  {self.mainapp.gaSet}')
 
 
 class InfoFrame(tk.Frame):
@@ -734,6 +797,6 @@ if __name__ == '__main__':
     if len(sys.argv)==2:
         gui_num = sys.argv[1]
     else:
-        gui_num = 2
+        gui_num = 1
     app = App(gui_num)
     app.mainloop()
