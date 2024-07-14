@@ -26,7 +26,7 @@ from pathlib import Path
 import lib_gen_1pDownload as lib_gen
 import lib_radapps_1pDownload as radapps
 import test_my_procs as tmp
-import main_1pDownload as main
+import MainTests_1pDownload as main
 
 
 class App(tk.Tk):
@@ -39,7 +39,7 @@ class App(tk.Tk):
         self['bd'] = 2
         
         self.os = os.name
-        self.gen = lib_gen.Gen()
+        self.gen = lib_gen.Gen(self)
         ip = self.get_pc_ip()
         self.gaSet['gui_num'] = gui_num
         self.gaSet['pc_ip'] = ip
@@ -85,7 +85,7 @@ class App(tk.Tk):
     def quit(self):
         print('quit', self)
         self.gen.save_init(self)
-        gen = lib_gen.Gen()
+        gen = lib_gen.Gen(self)
         gen.play_sound('info.wav')
         db_dict = {
             "title": "Confirm exit",
@@ -196,7 +196,7 @@ class StartFromFrame(tk.Frame):
     '''Create the StartFrom Frame on base of tk.Frame'''
     def __init__(self, parent, mainapp):
         super().__init__(parent)
-        print(f'StartFromFrame, self:<{self}>, parent:<{parent}>')
+        print(f'StartFromFrame, self:<{self}>, parent:<{parent}>, mainapp:<{mainapp}>')
         self.parent = parent
         self['relief'] = self.master['relief']
         self['bd'] = self.master['bd']
@@ -232,7 +232,7 @@ class StartFromFrame(tk.Frame):
         self.lab_curr_test_val.pack(side='left', padx='2')
 
     def button_run(self, *event):
-        gen = lib_gen.Gen()
+        gen = lib_gen.Gen(self.mainapp)
         print(f'\n{gen.my_time()} button_run1 mainapp:{self.mainapp}, {self.mainapp.gaSet}')
         self.mainapp.status_bar_frame.status('')
         self.mainapp.gaSet['act'] = 1
@@ -249,6 +249,8 @@ class StartFromFrame(tk.Frame):
             logs = f'{woDir}/logs'
         print(f'woDir:<{woDir}>logs:<{logs}>')
         Path(logs).mkdir(parents=True, exist_ok=True)
+        self.mainapp.gaSet['logs_fld'] = logs
+
         gui_num = self.mainapp.gaSet['gui_num']
 
         ret = 0
@@ -256,29 +258,29 @@ class StartFromFrame(tk.Frame):
         self.mainapp.gaSet['emp_name'] = 'KOBY LAZARY'
         if ret == 0:
             self.mainapp.gaSet['log'] = f"{logs}/{self.mainapp.gaSet['log_time']}_{gui_num}_{self.mainapp.gaSet['id_number']}.txt"
-            gen.add_to_log(self.mainapp, f"{self.mainapp.gaSet['id_number']} {self.mainapp.gaSet['dbr_name']}")
-            gen.add_to_log(self.mainapp, f"Main Board: {self.mainapp.gaSet['main_trace']} {self.mainapp.gaSet['main_pcb']}")
+            gen.add_to_log(f"{self.mainapp.gaSet['id_number']} {self.mainapp.gaSet['dbr_name']}")
+            gen.add_to_log(f"Main Board: {self.mainapp.gaSet['main_trace']} {self.mainapp.gaSet['main_pcb']}")
             if self.mainapp.gaSet['sub1_trace']:
-                gen.add_to_log(self.mainapp, f"Sub1 Board: {self.mainapp.gaSet['sub1_trace']} {self.mainapp.gaSet['sub1_pcb']}")
-            gen.add_to_log(self.mainapp, f"DBR Name: {self.mainapp.gaSet['dbr_name']}")
-            gen.add_to_log(self.mainapp,
-                               f"Employee Number: {self.mainapp.gaSet['emp_numb']}, Name: {self.mainapp.gaSet['emp_name']}")
-            gen.add_to_log(self.mainapp, '\n')
+                gen.add_to_log(f"Sub1 Board: {self.mainapp.gaSet['sub1_trace']} {self.mainapp.gaSet['sub1_pcb']}")
+            gen.add_to_log(f"DBR Name: {self.mainapp.gaSet['dbr_name']}")
+            gen.add_to_log(f"Employee Number: {self.mainapp.gaSet['emp_numb']}, Name: {self.mainapp.gaSet['emp_name']}")
+            gen.add_to_log('\n')
 
             tests = self.mainapp.tests
             # fst_tst = test_names_lst.index(Toolbar.var_start_from.get())
             fst_tst = self.mainapp.main_frame.frame_start_from.var_start_from.get()
-            print(f'button_run4 fst_tst:{fst_tst} ltests:{tests}')
+            tests_from = tests[tests.index(fst_tst):]
+            print(f'\nbutton_run4 fst_tst:{fst_tst} tests:{tests} tests_from:{tests_from}')
 
-            main_obj = main.Main()
-            for tst in tests:
+            main_obj = main.Main(self.mainapp)
+            for tst in tests_from:
                 tst = tst.split('..')[1]
-                gen.add_to_log(self.mainapp, f"Start of {tst}")
+                gen.add_to_log(f"Start of {tst}")
                 self.var_curr_test.set(tst)
                 print(f'\n{gen.my_time()} Start of {tst}')
                 self.mainapp.gaSet['root'].update()
                 try:
-                    ret = getattr(main_obj, tst)(self.mainapp)
+                    ret = getattr(main_obj, tst)()
                 except Exception as e:
                     ret = -1
                     self.mainapp.gaSet['fail'] = e
@@ -289,8 +291,8 @@ class StartFromFrame(tk.Frame):
                     ret_txt = f"Fail. Reason: {self.mainapp.gaSet['fail']}"
                 else:
                     ret_txt = 'Pass'
-                print(f'Ret of Test {tst}:{ret}')
-                gen.add_to_log(self.mainapp, f"End of {tst}, result: {ret_txt}\n")
+                print(f'{gen.my_time()} Ret of Test {tst}:{ret}')
+                gen.add_to_log(f"End of {tst}, result: {ret_txt}\n")
                 if ret != 0:
                     break
 
@@ -331,7 +333,7 @@ class StartFromFrame(tk.Frame):
         self.b_stop.state(["pressed", "disabled"])
 
         try:
-            gen = lib_gen.Gen()
+            # gen = lib_gen.Gen()
             gen.play_sound(wav)
         except Exception as e:
             pass
@@ -344,11 +346,12 @@ class InfoFrame(tk.Frame):
     '''Create the Info Frame on base of tk.Frame'''
     def __init__(self, parent, mainapp):
         super().__init__(parent)
-        print(f'InfoFrame, self:<{self}>, parent:<{parent}>')
+        print(f'InfoFrame, self:<{self}>, parent:<{parent}>, mainapp:<{mainapp}>')
         # self['relief'] = self.master['relief']
         self['relief'] = tk.GROOVE
         self['bd'] = 2
         self.put_widgets()
+        self.mainapp = mainapp
         
     def put_widgets(self):
         self.lab_act_package_txt = ttk.Label(self, text='Package:')
@@ -374,27 +377,28 @@ class BarcodesFrame(tk.Frame):
         # self['bd'] = self.master['bd']
         self['relief'] = tk.GROOVE
         self['bd'] = 2
-        print(f'BarcodesFrame, self:<{self}>, parent:<{parent}>')
+        print(f'BarcodesFrame, self:<{self}>, parent:<{parent}>, mainapp:<{mainapp}>')
         self.parent = parent
+        self.mainapp = mainapp
 
-        self.put_widgets(mainapp)
+        self.put_widgets()
         self.uut_id.set('DC1002333717')
         # self.main_id.set('21341063')
         self.ent_uut_id.select_range(0, tk.END)
         self.ent_uut_id.focus_set()
 
-        mainapp.gaSet['main_pcb'] = False
-        mainapp.gaSet['sub1_pcb'] = False
-        mainapp.gaSet['main_trace'] = False
-        mainapp.gaSet['sub1_trace'] = False
+        self.mainapp.gaSet['main_pcb'] = False
+        self.mainapp.gaSet['sub1_pcb'] = False
+        self.mainapp.gaSet['main_trace'] = False
+        self.mainapp.gaSet['sub1_trace'] = False
         
-    def put_widgets(self, mainapp):
+    def put_widgets(self):
         self.barcode_widgets = []
         self.lab_uut_id = ttk.Label(self, text='UUT ID:')
         self.barcode_widgets.append(self.lab_uut_id)
         self.uut_id = tk.StringVar()
         self.ent_uut_id = ttk.Entry(self, textvariable=self.uut_id, justify="center")
-        self.ent_uut_id.bind('<Return>', partial(self.bind_uutId_entry, mainapp))
+        self.ent_uut_id.bind('<Return>', partial(self.bind_uutId_entry, self.mainapp))
         self.barcode_widgets.append(self.ent_uut_id)
         self.lab_uut_dbr = ttk.Label(self, width=40, relief=tk.GROOVE, anchor="center")
         self.barcode_widgets.append(self.lab_uut_dbr)
@@ -403,7 +407,7 @@ class BarcodesFrame(tk.Frame):
         self.lab_main_id = ttk.Label(self, text='PCB_MAIN ID:')
         self.barcode_widgets.append(self.lab_main_id)
         self.ent_main_id = ttk.Entry(self, textvariable=self.main_id, justify="center")
-        self.ent_main_id.bind('<Return>', partial(self.bind_mainId_entry, mainapp))
+        self.ent_main_id.bind('<Return>', partial(self.bind_mainId_entry, self.mainapp))
         self.barcode_widgets.append(self.ent_main_id)
         self.lab_main_dbr = ttk.Label(self, width=16, relief=tk.GROOVE, anchor="center")
         self.barcode_widgets.append(self.lab_main_dbr)
@@ -412,7 +416,7 @@ class BarcodesFrame(tk.Frame):
         self.lab_sub1_id = ttk.Label(self, text='PCB_SUB_CARD_1 ID:')
         self.barcode_widgets.append(self.lab_sub1_id)
         self.ent_sub1_id = ttk.Entry(self, textvariable=self.sub1_id, justify="center")
-        self.ent_sub1_id.bind('<Return>', partial(self.bind_sub1Id_entry, mainapp))
+        self.ent_sub1_id.bind('<Return>', partial(self.bind_sub1Id_entry, self.mainapp))
         self.barcode_widgets.append(self.ent_sub1_id)
         self.lab_sub1_dbr = ttk.Label(self, width=16, relief=tk.GROOVE, anchor="center")
         self.barcode_widgets.append(self.lab_sub1_dbr)
@@ -439,18 +443,18 @@ class BarcodesFrame(tk.Frame):
 
 
 
-    def bind_uutId_entry(self, mainapp, *event):
-        gen = lib_gen.Gen()
-        print(f'\n{gen.my_time()}bind_uutId_entry self:{self} mainapp:{mainapp} event:{event}')
+    def bind_uutId_entry(self, *event):
+        gen = lib_gen.Gen(self.mainapp)
+        print(f'\n{gen.my_time()}bind_uutId_entry self:{self} mainapp:{self.mainapp} event:{event}')
         id_number = self.uut_id.get()
         print(f'bind_uutId_entry id_number:{id_number}')
 
         if id_number == 'test_retrive_dut_family':
-            tmp.test_retrive_dut_family(mainapp)
+            tmp.test_retrive_dut_family(self.mainapp)
             return None
 
-        mainapp.start_from_combobox([], '')
-        mainapp.status_bar_frame.status(f'Getting data for {id_number}')
+        self.mainapp.start_from_combobox([], '')
+        self.mainapp.status_bar_frame.status(f'Getting data for {id_number}')
 
         ws = radapps.WebServices()
         ws.print_rtext = False
@@ -459,11 +463,12 @@ class BarcodesFrame(tk.Frame):
         dbr_name = dicti['item']
         print(f'bind_uutId_entry res:{res} dbr_name:{dbr_name}')
         if res:
-            mainapp.title(str(mainapp.gaSet['gui_num']) + ': ' + dbr_name)
-            mainapp.gaSet['dbr_name'] = dbr_name
+            self.mainapp.title(str(self.mainapp.gaSet['gui_num']) + ': ' + dbr_name)
+            self.mainapp.gaSet['dbr_name'] = dbr_name
         else:
-            DialogBox(mainapp, db_dict={'title': "Get DBR Name fail", 'type': ['OK'], 'message': dbr_name,
+            DialogBox(self.mainapp, db_dict={'title': "Get DBR Name fail", 'type': ['OK'], 'message': dbr_name,
                                                      'icon': '::tk::icons::error'}).show()
+            self.mainapp.gaSet['fail'] = dbr_name
             return False
 
         # res, mrkt_name = gen.get_mrkt_name(id_number)
@@ -471,85 +476,86 @@ class BarcodesFrame(tk.Frame):
         mrkt_name = dicti['MKT Item']
         print(f'bind_uutId_entry res:{res} mrkt_name:{mrkt_name}')
         if res:
-            mainapp.gaSet['mrkt_name'] = mrkt_name
+            self.mainapp.gaSet['mrkt_name'] = mrkt_name
         else:
-            DialogBox(mainapp, db_dict={'title': "Get Marketing Name fail", 'type': ['OK'], 'message': mrkt_name,
+            DialogBox(self.mainapp, db_dict={'title': "Get Marketing Name fail", 'type': ['OK'], 'message': mrkt_name,
                                                      'icon': '::tk::icons::error'}).show()
-            #return False
+            self.mainapp.gaSet['fail'] = mrkt_name
+            return False
 
         # res, csl = gen.get_csl_name(id_number)
         res, dicti = ws.retrieve_csl(id_number)
         csl = dicti['CSL']
         print(f'bind_uutId_entry res:{res} csl:{csl}')
         if res:
-            mainapp.gaSet['csl'] = csl
+            self.mainapp.gaSet['csl'] = csl
         else:
-            DialogBox(mainapp, db_dict={'title': "Get CSL fail", 'type': ['OK'], 'message': csl,
+            DialogBox(self.mainapp, db_dict={'title': "Get CSL fail", 'type': ['OK'], 'message': csl,
                                         'icon': '::tk::icons::error'}).show()
             return False
 
-        mainapp.gaSet['id_number'] = id_number
+        self.mainapp.gaSet['id_number'] = id_number
         #print(f'bind_uutId_entry mainapp.gaSet:{mainapp.gaSet}')
 
-        res = gen.retrive_dut_fam(mainapp)
+        res = gen.retrive_dut_fam()
         print(f'bind_uutId_entry res_retrive_dut_fam:{res}')
         if res != True:
-            DialogBox(mainapp, db_dict={'title': "Retrive UUT family fail", 'type': ['OK'],
+            DialogBox(self.mainapp, db_dict={'title': "Retrive UUT family fail", 'type': ['OK'],
                                         'message': "Retrive UUT family fail",
                                         'icon': '::tk::icons::error'}).show()
-            mainapp.status_bar_frame.status(f'Retrive UUT family fail for {id_number}', 'red')
+            self.mainapp.status_bar_frame.status(f'Retrive UUT family fail for {id_number}', 'red')
             return False
 
-        res = gen.get_dbr_sw(mainapp)
+        res = gen.get_dbr_sw()
         print(f'bind_uutId_entry res of get_dbr_sw:{res}')
 
-        self.lab_csl_val.config(text=mainapp.gaSet['csl'])
+        self.lab_csl_val.config(text=self.mainapp.gaSet['csl'])
 
         self.ent_main_id.focus_set()
         self.main_id.set('')
         self.ent_main_id.select_range(0, tk.END)
-        mainapp.status_bar_frame.status('Ready')
+        self.mainapp.status_bar_frame.status('Ready')
         self.lab_uut_dbr.config(text=dbr_name)  #  width=len(dbr_name)+4
 
-        main_obj = main.Main()
-        main_obj.build_tests(mainapp)
-        mainapp.tests = main_obj.tests
+        main_obj = main.Main(self.mainapp)
+        main_obj.build_tests()
+        self.mainapp.tests = main_obj.tests
 
-    def bind_mainId_entry(self, mainapp, *event):
-        gen = lib_gen.Gen()
+    def bind_mainId_entry(self, *event):
+        gen = lib_gen.Gen(self.mainapp)
         ws = radapps.WebServices()
         ws.print_rtext = False
 
-        print(f'\n{gen.my_time()}bind_mainId_entry self:{self} mainapp:{mainapp} event:{event}')
+        print(f'\n{gen.my_time()}bind_mainId_entry self:{self} mainapp:{self.mainapp} event:{event}')
         barcode = self.main_id.get()
         res, dicti = ws.retrieve_traceId_data(barcode)
         # print(res, type(dicti))
         if res:
             # print(dicti['pcb'])
             self.lab_main_dbr.config(text=dicti['pcb'])
-            mainapp.gaSet['main_pcb'] = dicti['pcb']
+            self.mainapp.gaSet['main_pcb'] = dicti['pcb']
             self.ent_sub1_id.focus_set()
             self.sub1_id.set('')
             self.ent_sub1_id.select_range(0, tk.END)
-            mainapp.gaSet['main_trace'] = barcode
+            self.mainapp.gaSet['main_trace'] = barcode
         else:
             print(dicti)
         return res
 
-    def bind_sub1Id_entry(self, mainapp, *event):
-        gen = lib_gen.Gen()
+    def bind_sub1Id_entry(self, *event):
+        gen = lib_gen.Gen(self.mainapp)
         ws = radapps.WebServices()
         ws.print_rtext = False
 
-        print(f'\n{gen.my_time()}bind_subId_entry self:{self} mainapp:{mainapp} event:{event}')
+        print(f'\n{gen.my_time()}bind_subId_entry self:{self} mainapp:{self.mainapp} event:{event}')
         barcode = self.sub1_id.get()
         res, dicti = ws.retrieve_traceId_data(barcode)
         # print(res, type(dicti))
         if res:
             print(dicti['pcb'])
             self.lab_sub1_dbr.config(text=dicti['pcb'])
-            mainapp.gaSet['sub1_pcb'] = dicti['pcb']
-            mainapp.gaSet['sub1_trace'] = barcode
+            self.mainapp.gaSet['sub1_pcb'] = dicti['pcb']
+            self.mainapp.gaSet['sub1_trace'] = barcode
         else:
             print(dicti)
         return res
@@ -562,6 +568,7 @@ class StatusBarFrame(tk.Frame):
         print(f'StatusBarFrame, self:<{self}>, parent:<{parent}>')
         self['relief'] = self.master['relief']
         self['bd'] = self.master['bd']
+        self.mainapp = mainapp
 
         self.put_widgets()
         

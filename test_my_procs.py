@@ -7,7 +7,7 @@ def test_retrive_dut_family(mainapp):
 
     ws = radapps.WebServices()
     ws.print_rtext = False
-    gen = lib_gen.Gen()
+    gen = lib_gen.Gen(mainapp)
     log = f'/home/ilya/temp/{gen.my_time()}.txt'
 
     for id_number in ['DC1002309464', 'DC1002281177', 'DC1002325736', 'DC10023011897', 'DC1002309826', 'DC1002319735',

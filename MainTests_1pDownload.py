@@ -4,15 +4,18 @@ import time
 import lib_gen_1pDownload as lib_gen
 
 class Main:
-    def __init__(self):
+    def __init__(self, mainapp):
         self.tests = []
+        self.mainapp = mainapp
 
-    def build_tests(self, mainapp):
+    def build_tests(self):
         test_names_lst = []
         test_names_lst = ["Secure_UBoot"]
-        test_names_lst= ['Set_Env', 'Eeprom', 'Run_BootNet', 'ID']
+        test_names_lst= ['Set_Env']
+        test_names_lst += ['Eeprom']
+        # test_names_lst= ['Set_Env', 'Eeprom', 'Run_BootNet', 'ID']
 
-        if mainapp.gaSet['uut_opt'] != 'ETX':
+        if self.mainapp.gaSet['uut_opt'] != 'ETX':
             test_names_lst += ['MicroSD']
 
         test_names_lst += 'SOC_Flash_Memory', 'SOC_i2C', 'Front_Panel_Leds'
@@ -23,19 +26,19 @@ class Main:
             ind += 1
         print(f'Tests.AllTests.test_names_lst:{self.tests}')
 
-        mainapp.start_from_combobox(self.tests, self.tests[0])
+        self.mainapp.start_from_combobox(self.tests, self.tests[0])
 
-    def Set_Env(self, mainapp):
-        gen = lib_gen.Gen()
+    def Set_Env(self):
+        gen = lib_gen.Gen(self.mainapp)
         gen.power("1", "0")
         time.sleep(4)
         gen.power("1", "1")
 
-        com = mainapp.gaSet['comDut']
+        com = self.mainapp.gaSet['comDut']
         ser = lib_gen.RLCom(com)
         res = ser.open()
         if res is False:
-            mainapp.gaSet['fail'] = f'Open COM {com} Fail'
+            self.mainapp.gaSet['fail'] = f'Open COM {com} Fail'
             return -1
 
         res = -1
@@ -47,29 +50,29 @@ class Main:
             time.sleep(1.0)
 
         if res == -1:
-            mainapp.gaSet['fail'] = "Can't get PCPE prompt"
+            self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"
             ser.close()
             return -1
 
         print(f'\n{gen.my_time()} ENV before set')
         ser.send('printenv\r', "PCPE>>")
         ser.send('setenv serverip 10.10.10.1\r', "PCPE>>")
-        ser.send(f'setenv ipaddr   10.10.10.1{mainapp.gaSet['gui_num']}\r', "PCPE>>")
+        ser.send(f'setenv ipaddr   10.10.10.1{self.mainapp.gaSet['gui_num']}\r', "PCPE>>")
         ser.send('setenv gatewayip 10.10.10.1\r', "PCPE>>")
         ser.send('setenv netmask 255.255.255.0\r', "PCPE>>")
 
         dtb_sh = ''
         dtb_file = ''
-        ma = re.search(r'REV([\d\.]+)\w', mainapp.gaSet['main_pcb'])
+        ma = re.search(r'REV([\d\.]+)\w', self.mainapp.gaSet['main_pcb'])
         main_pc_rev = float(ma.group(1))
-        if mainapp.gaSet['uut_opt'] == 'ETX':
+        if self.mainapp.gaSet['uut_opt'] == 'ETX':
             dtb_sh = 'set_etx1p'
             dtb_file = '/boot/armada-3720-Etx1p.dtb'
         else:
-            if re.search('/HL', mainapp.gaSet['dbr_name']):
+            if re.search('/HL', self.mainapp.gaSet['dbr_name']):
                 dtb_sh = 'set_sf1p_superset_hl'
                 dtb_file = '/boot/armada-3720-SF1p_superSet_hl.dtb'
-            elif mainapp.gaSet['wanPorts'] == '2U':
+            elif self.mainapp.gaSet['wanPorts'] == '2U':
                 dtb_sh = 'set_sf1p'
                 dtb_file = '/boot/armada-3720-SF1p.dtb'
             elif main_pc_rev < 0.6:
@@ -91,7 +94,7 @@ class Main:
                 ser.close()
                 return -1
             
-        gui_num = mainapp.gaSet['gui_num']
+        gui_num = self.mainapp.gaSet['gui_num']
         ser.send(f'setenv eth1addr 00:55:82:11:21:{gui_num}{gui_num}\r', "PCPE>>")
 
         ser.send(f'setenv ethact neta@40000\r', "PCPE>>")
@@ -112,7 +115,7 @@ class Main:
             time.sleep(2)
             ret = ser.send('ping 10.10.10.1\r', "is alive")
             if ret != 0:
-                mainapp.gaSet['fail'] = "Ping to 10.10.10.1 Fail"
+                self.mainapp.gaSet['fail'] = "Ping to 10.10.10.1 Fail"
 
 
         ser.close()
@@ -120,7 +123,44 @@ class Main:
         return ret
     
     def Eeprom(self):
-        gen = lib_gen.Gen()
-        ret = gen.build_eeprom_string()
+        gen = lib_gen.Gen(self.mainapp)
+
+        ret, ee_file_name = gen.build_eeprom_string()
+        if ret == 0:
+            com = self.mainapp.gaSet['comDut']
+            ser = lib_gen.RLCom(com)
+            ret = ser.open()
+            if ret is False:
+                self.mainapp.gaSet['fail'] = f'Open COM {com} Fail'
+                return -1
+
+            ret = -1
+            for i in range(1,21):
+                ret = ser.send('\r', 'PCPE>>', 1)
+                print(f'{i} Set_Env ret: <{ret}>')
+                if ret == 0:
+                    break
+                time.sleep(1.0)
+            if ret == -1:
+                self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"
+                            
+        if ret == 0:
+            self.mainapp.status_bar_frame.status('Erasing Eeprom')
+            ret = ser.send('iic e 52\r', 'PCPE>>', 20)
+            print(f'Erasing Eeprom ret: <{ret}>')
+            if ret == -1:
+                self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"
+
+        if ret == 0:
+            self.mainapp.status_bar_frame.status('Creating Eeprom')
+            ret = ser.send(f'iic c {ee_file_name}\r', 'PCPE>>', 20)
+            print(f'Creating Eeprom ret: <{ret}>, ser.buffer:<{ser.buffer}>')
+            if ret == -1:
+                self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"
+            
+        if ret != 0:
+            ser.close()
+            return -1 
+        
         return ret
 

@@ -13,12 +13,13 @@ import lib_radapps_1pDownload as radapps
 
 
 class Gen:
-    def __init__(self):
+    def __init__(self, mainapp):
         self.os = os.name
         self.hidraw = "0"
+        self.mainapp = mainapp
         
     def power(self, ps, state):
-        print(f'Power self:{self}, ps:{ps}, state:{state}')
+        print(f'Power ps:{ps}, state:{state}')  # self:{self}, 
         
         if state == 1:
             st = 'ON'
@@ -191,8 +192,8 @@ class Gen:
         now = datetime.now()
         return now.strftime("%Y-%m-%d %H:%M:%S")
 
-    def add_to_log(self, mainapp, txt):
-        with open(mainapp.gaSet['log'], 'a') as log:
+    def add_to_log(self, txt):
+        with open(self.mainapp.gaSet['log'], 'a') as log:
             if txt == '':
                 text = f'\n'
             else:
@@ -200,11 +201,11 @@ class Gen:
             log.write(text)
 
 
-    def retrive_dut_fam(self, mainapp):
+    def retrive_dut_fam(self):
         print(f'\n{self.my_time()} retrive_dut_fam')
         # fields = mainapp.gaSet['dbr_name'].split('/')
-        dbr_name = mainapp.gaSet['dbr_name'] + '/'
-        print(mainapp.gaSet['dbr_name'], dbr_name)
+        dbr_name = self.mainapp.gaSet['dbr_name'] + '/'
+        print(self.mainapp.gaSet['dbr_name'], dbr_name)
         # print(f'retrive_dut_fam, {self}')
 
         # if 'HL' in fields:
@@ -214,11 +215,11 @@ class Gen:
         sf = sf_ma.group(1)
         # print(f'sf:{sf}')
         if sf in ['SF-1P', 'ETX-1P', 'SF-1P_ICE', 'ETX-1P_SFC', 'SF-1P_ANG']:
-            mainapp.gaSet['prompt'] = '-1p#'
+            self.mainapp.gaSet['prompt'] = '-1p#'
         elif sf == 'VB-101V':
-            mainapp.gaSet['prompt'] = 'VB101V#'
+            self.mainapp.gaSet['prompt'] = 'VB101V#'
         else:
-            return f'Wrong product: {mainapp.gaSet["dbr_name"]}'
+            return f'Wrong product: {self.mainapp.gaSet["dbr_name"]}'
         # fields.remove(sf)
 
         if sf in ['ETX-1P', 'ETX-1P_SFC']:
@@ -232,7 +233,7 @@ class Gen:
             lanPorts = "4UTP"
         else:
             box = re.search(r'P[_A-Z]*/(E[R\d]?)/', dbr_name).group(1)
-            ps = re.search(r'E[R\d]?/([A-Z0-9]+)/', dbr_name).group(1)
+            ps = re.search(r'E[R\d]+/([A-Z0-9]+)/', dbr_name).group(1)
             uut_opt = 'SF'
 
             wanPorts_ma = re.search(r'/(2U)/', dbr_name)
@@ -243,11 +244,11 @@ class Gen:
             wanPorts = wanPorts_ma.group(1)
             lanPorts = "NotExists"
 
-        mainapp.gaSet['box'] = box
-        mainapp.gaSet['ps'] = ps
-        mainapp.gaSet['uut_opt'] = uut_opt
-        mainapp.gaSet['wanPorts'] = wanPorts
-        mainapp.gaSet['lanPorts'] = lanPorts
+        self.mainapp.gaSet['box'] = box
+        self.mainapp.gaSet['ps'] = ps
+        self.mainapp.gaSet['uut_opt'] = uut_opt
+        self.mainapp.gaSet['wanPorts'] = wanPorts
+        self.mainapp.gaSet['lanPorts'] = lanPorts
         # if box in fields:
         #     fields.remove(box)
         # fields.remove(ps)
@@ -266,36 +267,36 @@ class Gen:
                     if serPort_ma is None:
                         serPort_ma = re.search(r'/(2RSI)/', dbr_name)
         if serPort_ma is None:
-            mainapp.gaSet['serPort'] = 'NotExists'
+            self.mainapp.gaSet['serPort'] = 'NotExists'
         else:
-            mainapp.gaSet['serPort'] = serPort_ma.group(1)
+            self.mainapp.gaSet['serPort'] = serPort_ma.group(1)
         # if mainapp.gaSet['serPort'] in fields:
         #     fields.remove(mainapp.gaSet['serPort'])
 
         serPortCsp = re.search(r'/(CSP)/', dbr_name)
         if serPortCsp is None:
-            mainapp.gaSet['serPortCsp'] = 'NotExists'
+            self.mainapp.gaSet['serPortCsp'] = 'NotExists'
         else:
-            mainapp.gaSet['serPortCsp'] = serPortCsp.group(1)
+            self.mainapp.gaSet['serPortCsp'] = serPortCsp.group(1)
         # if mainapp.gaSet['serPortCsp'] in fields:
         #     fields.remove(mainapp.gaSet['serPortCsp'])
 
-        mainapp.gaSet['poe'] = 'NotExists'
+        self.mainapp.gaSet['poe'] = 'NotExists'
         # if mainapp.gaSet['poe'] in fields:
         #     fields.remove(mainapp.gaSet['poe'])
 
-        mainapp.gaSet['plc'] = 'NotExists'
+        self.mainapp.gaSet['plc'] = 'NotExists'
         # if mainapp.gaSet['plc'] in fields:
         #     fields.remove(mainapp.gaSet['plc'])
 
-        mainapp.gaSet['cellType'] = 'NotExists'
-        mainapp.gaSet['cellQty'] = 'NotExists'
+        self.mainapp.gaSet['cellType'] = 'NotExists'
+        self.mainapp.gaSet['cellQty'] = 'NotExists'
         for cell in ['HSP', 'L1', 'L2', 'L3', 'L4', 'L450A', 'L450B', '5G', 'L4P', 'LG']:
             qty = len([i for i, x in enumerate(dbr_name.split('/')) if x == cell])
             # print(f'cell{cell}, qty:{qty}')
             if qty > 0:
-                mainapp.gaSet['cellType'] = cell
-                mainapp.gaSet['cellQty'] = qty
+                self.mainapp.gaSet['cellType'] = cell
+                self.mainapp.gaSet['cellQty'] = qty
         # if mainapp.gaSet['cellType'] in fields:
         #     fields.remove(mainapp.gaSet['cellType'])
         # if mainapp.gaSet['cellType'] in fields:
@@ -303,98 +304,98 @@ class Gen:
 
         gps = re.search(r'/(G)/', dbr_name)
         if gps is None:
-            mainapp.gaSet['gps'] = 'NotExists'
+            self.mainapp.gaSet['gps'] = 'NotExists'
         else:
-            mainapp.gaSet['gps'] = gps.group(1)
+            self.mainapp.gaSet['gps'] = gps.group(1)
         # if mainapp.gaSet['gps'] in fields:
         #     fields.remove(mainapp.gaSet['gps'])
 
         wifi_ma = re.search(r'/(WF)/', dbr_name)
         if wifi_ma is not None:
-            mainapp.gaSet['wifi'] = 'WF'
+            self.mainapp.gaSet['wifi'] = 'WF'
         else:
             wifi_ma = re.search(r'/(WFH)/', dbr_name)
             if wifi_ma is not None:
-                mainapp.gaSet['wifi'] = 'WH'
+                self.mainapp.gaSet['wifi'] = 'WH'
             else:
                 wifi_ma = re.search(r'/(WH)/', dbr_name)
                 if wifi_ma is not None:
-                    mainapp.gaSet['wifi'] = 'WH'
+                    self.mainapp.gaSet['wifi'] = 'WH'
                 else:
-                    mainapp.gaSet['wifi'] = 'NotExists'
+                    self.mainapp.gaSet['wifi'] = 'NotExists'
         # if mainapp.gaSet['wifi'] in fields:
         #     fields.remove(mainapp.gaSet['wifi'])
 
         dryCon_ma = re.search(r'/(GO)/', dbr_name)
         if dryCon_ma is not None:
-            mainapp.gaSet['dryCon'] = 'GO'
+            self.mainapp.gaSet['dryCon'] = 'GO'
         else:
-            mainapp.gaSet['dryCon'] = 'FULL'
+            self.mainapp.gaSet['dryCon'] = 'FULL'
 
         rg = re.search(r'/(RG)/', dbr_name)
         if rg is None:
-            mainapp.gaSet['rg'] = 'NotExists'
+            self.mainapp.gaSet['rg'] = 'NotExists'
         else:
-            mainapp.gaSet['rg'] = 'RG'
+            self.mainapp.gaSet['rg'] = 'RG'
         # if mainapp.gaSet['rg'] in fields:
         #     fields.remove(mainapp.gaSet['rg'])
 
         lora_ma = re.search(r'/(LR[1-6A-Z])/', dbr_name)
         if lora_ma is None:
-            mainapp.gaSet['lora'] = 'NotExists'
-            mainapp.gaSet['lora_region'] = 'NotExists'
-            mainapp.gaSet['lora_fam'] = 'NotExists'
-            mainapp.gaSet['lora_band'] = 'NotExists'
+            self.mainapp.gaSet['lora'] = 'NotExists'
+            self.mainapp.gaSet['lora_region'] = 'NotExists'
+            self.mainapp.gaSet['lora_fam'] = 'NotExists'
+            self.mainapp.gaSet['lora_band'] = 'NotExists'
         else:
             lora = lora_ma.group(1)
-            mainapp.gaSet['lora'] = lora
+            self.mainapp.gaSet['lora'] = lora
             if lora == 'LR1':
-                mainapp.gaSet['lora_region'] = 'eu433'
-                mainapp.gaSet['lora_fam'] = '4XX'
-                mainapp.gaSet['lora_band'] = 'EU 433'
+                self.mainapp.gaSet['lora_region'] = 'eu433'
+                self.mainapp.gaSet['lora_fam'] = '4XX'
+                self.mainapp.gaSet['lora_band'] = 'EU 433'
             elif lora == 'LR2':
-                mainapp.gaSet['lora_region'] = 'eu868'
-                mainapp.gaSet['lora_fam'] = '8XX'
-                mainapp.gaSet['lora_band'] = 'EU 863-870'
+                self.mainapp.gaSet['lora_region'] = 'eu868'
+                self.mainapp.gaSet['lora_fam'] = '8XX'
+                self.mainapp.gaSet['lora_band'] = 'EU 863-870'
             elif lora == 'LR3':
-                mainapp.gaSet['lora_region'] = 'au915'
-                mainapp.gaSet['lora_fam'] = '9XX'
-                mainapp.gaSet['lora_band'] = 'AU 915-928 Sub-band 2'
+                self.mainapp.gaSet['lora_region'] = 'au915'
+                self.mainapp.gaSet['lora_fam'] = '9XX'
+                self.mainapp.gaSet['lora_band'] = 'AU 915-928 Sub-band 2'
             elif lora == 'LR4':
-                mainapp.gaSet['lora_region'] = 'us902'
-                mainapp.gaSet['lora_fam'] = '9XX'
-                mainapp.gaSet['lora_band'] = 'US 902-928 Sub-band 2'
+                self.mainapp.gaSet['lora_region'] = 'us902'
+                self.mainapp.gaSet['lora_fam'] = '9XX'
+                self.mainapp.gaSet['lora_band'] = 'US 902-928 Sub-band 2'
             elif lora == 'LR6':
-                mainapp.gaSet['lora_region'] = 'as923'
-                mainapp.gaSet['lora_fam'] = '9XX'
-                mainapp.gaSet['lora_band'] = 'AS 923-925'
+                self.mainapp.gaSet['lora_region'] = 'as923'
+                self.mainapp.gaSet['lora_fam'] = '9XX'
+                self.mainapp.gaSet['lora_band'] = 'AS 923-925'
             elif lora == 'LRA':
-                mainapp.gaSet['lora_region'] = 'us915'
-                mainapp.gaSet['lora_fam'] = '9XX'
-                mainapp.gaSet['lora_band'] = 'US 902-928 Sub-band 2'
+                self.mainapp.gaSet['lora_region'] = 'us915'
+                self.mainapp.gaSet['lora_fam'] = '9XX'
+                self.mainapp.gaSet['lora_band'] = 'US 902-928 Sub-band 2'
             elif lora == 'LRB':
-                mainapp.gaSet['lora_region'] = 'eu868'
-                mainapp.gaSet['lora_fam'] = '8XX'
-                mainapp.gaSet['lora_band'] = 'EU 863-870'
+                self.mainapp.gaSet['lora_region'] = 'eu868'
+                self.mainapp.gaSet['lora_fam'] = '8XX'
+                self.mainapp.gaSet['lora_band'] = 'EU 863-870'
             elif lora == 'LRC':
-                mainapp.gaSet['lora_region'] = 'eu433'
-                mainapp.gaSet['lora_fam'] = '4XX'
-                mainapp.gaSet['lora_band'] = 'EU 433'
+                self.mainapp.gaSet['lora_region'] = 'eu433'
+                self.mainapp.gaSet['lora_fam'] = '4XX'
+                self.mainapp.gaSet['lora_band'] = 'EU 433'
         # if mainapp.gaSet['lora'] in fields:
         #     fields.remove(mainapp.gaSet['lora'])
 
         mem = re.search(r'/2R/', dbr_name)
         if mem is not None:
-            mainapp.gaSet['mem'] = 2
+            self.mainapp.gaSet['mem'] = 2
             # fields.remove('2R')
         else:
-            mainapp.gaSet['mem'] = 1
+            self.mainapp.gaSet['mem'] = 1
 
         plc_ma = re.search(r'/(PLC[DGO])/', dbr_name)
         if plc_ma is None:
-            mainapp.gaSet['plc'] = 'NotExists'
+            self.mainapp.gaSet['plc'] = 'NotExists'
         else:
-            mainapp.gaSet['plc'] = plc_ma.group(1)
+            self.mainapp.gaSet['plc'] = plc_ma.group(1)
 
         # mainapp.gaSet['fields'] = fields
 
@@ -403,20 +404,21 @@ class Gen:
 
         return True
 
-    def get_dbr_sw(self, mainapp):
+    def get_dbr_sw(self):
         gswv = radapps.GetSWVersions()
-        id_number = mainapp.gaSet['id_number']
+        id_number = self.mainapp.gaSet['id_number']
         res, sw_l = gswv.gets_sw(id_number)
         print(res, sw_l)
-        mainapp.gaSet['sw_boot'] = None
-        mainapp.gaSet['sw_app'] = None
-        for sw in sw_l:
-            ver = sw['version']
-            if ver[0] == 'B':
-                mainapp.gaSet['sw_boot'] = ver
-            else:
-                mainapp.gaSet['sw_app'] = ver
-        print(f'get dbr sw {mainapp.gaSet}')
+        if res:
+            self.mainapp.gaSet['sw_boot'] = None
+            self.mainapp.gaSet['sw_app'] = None
+            for sw in sw_l:
+                ver = sw['version']
+                if ver[0] == 'B':
+                    self.mainapp.gaSet['sw_boot'] = ver
+                else:
+                    self.mainapp.gaSet['sw_app'] = ver
+            print(f'get dbr sw {self.mainapp.gaSet}')
         return res
 
     def play_sound(self, sound='pass.wav'):
@@ -427,13 +429,13 @@ class Gen:
         subprocess.Popen([f'aplay /home/ilya/Wav/{sound}'], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, text=True)
         
-    def build_eeprom_string(self, mainapp):
-        print(f'\n{self.my_time} Build EEprom String')
+    def build_eeprom_string(self):
+        print(f'\n{self.my_time()} Build EEprom String')
 
-        cell_type = mainapp.gaSet['cellType']
-        cell_qty = mainapp.gaSet['cellQty'] 
-        wifi = mainapp.gaSet['wifi']
-        lora = mainapp.gaSet['lora']
+        cell_type = self.mainapp.gaSet['cellType']
+        cell_qty = self.mainapp.gaSet['cellQty'] 
+        wifi = self.mainapp.gaSet['wifi']
+        lora = self.mainapp.gaSet['lora']
 
         if cell_qty == 'NotExists' and wifi == 'NotExists' and lora == 'NotExists':
             print("### #no modems, no wifi, no lora")
@@ -480,29 +482,29 @@ class Gen:
 
         res, mac = self.get_mac()
         if res is not True:
-            mainapp.gaSet['fail'] = "Get MACs Fail"
+            self.mainapp.gaSet['fail'] = "Get MACs Fail"
             return -1
         
-        ma = re.search(r'REV([\d\.]+)\w', mainapp.gaSet['main_pcb'])
+        ma = re.search(r'REV([\d\.]+)\w', self.mainapp.gaSet['main_pcb'])
         main_pcb_rev = float(ma.group(1))
-        if mainapp.gaSet['ps'] == 'ACEX':
+        if self.mainapp.gaSet['ps'] == 'ACEX':
             ps = '12V'
-        elif mainapp.gaSet['ps'] == 'DC' and main_pcb_rev <= 0.5:
+        elif self.mainapp.gaSet['ps'] == 'DC' and main_pcb_rev <= 0.5:
             ps = '12V'
-        elif mainapp.gaSet['ps'] == 'DC' and main_pcb_rev > 0.5:
+        elif self.mainapp.gaSet['ps'] == 'DC' and main_pcb_rev > 0.5:
             ps = 'DC'
-        elif mainapp.gaSet['ps'] == 'WDC':
+        elif self.mainapp.gaSet['ps'] == 'WDC':
             ps = 'WDC-I'
-        elif mainapp.gaSet['ps'] == '12V':
+        elif self.mainapp.gaSet['ps'] == '12V':
             ps = '12V-I'
-        elif mainapp.gaSet['ps'] == 'D72V':
+        elif self.mainapp.gaSet['ps'] == 'D72V':
             ps = 'D72V-I'
-        elif mainapp.gaSet['ps'] == 'FDC':
+        elif self.mainapp.gaSet['ps'] == 'FDC':
             ps = 'FDC-I'
-        elif mainapp.gaSet['ps'] == 'RDC':
+        elif self.mainapp.gaSet['ps'] == 'RDC':
             ps = 'RDC-I'
 
-        serial = mainapp.gaSet['serPort']
+        serial = self.mainapp.gaSet['serPort']
         if serial == 'NotExists':
             ser1 = ''
             ser2 = ''
@@ -536,7 +538,7 @@ class Gen:
         ee_str += f'MODEM_1_MANUFACTURER={mod1man},'
         ee_str += f'MODEM_2_MANUFACTURER={mod2man},'
         ee_str += f'MODEM_1_TYPE={mod1type},'
-        ee_str += f'MODEM_2_TYPE={mod1type},'
+        ee_str += f'MODEM_2_TYPE={mod2type},'
         ee_str += f'MAC_ADDRESS={mac},'
 
         ee_str += f'MAIN_CARD_HW_VERSION={main_pcb_rev},'
@@ -548,27 +550,27 @@ class Gen:
         else:
             hwAdd = 'C'
             if (main_pcb_rev == 0.6 and
-                    mainapp.gaSet['dbr_name'] in ['SF-1P/E1/DC/4U2S/2RSM/5G/2R',
+                    self.mainapp.gaSet['dbr_name'] in ['SF-1P/E1/DC/4U2S/2RSM/5G/2R',
                                                   'SF-1P/E1/DC/4U2S/2RSM/5G/G/LRB/2R',
                                                   'SF-1P/E1/DC/4U2S/2RSM/5G/LRA/2R']):
                 hwAdd = 'C'   
-            if mainapp.gaSet['sub1_pcb']:
-                ma = re.search(r'REV([\d\.]+)\w', mainapp.gaSet['sub1_pcb'])
+            if self.mainapp.gaSet['sub1_pcb']:
+                ma = re.search(r'REV([\d\.]+)\w', self.mainapp.gaSet['sub1_pcb'])
                 sub1_pcb_rev = float(ma.group(1))
-                sub1_pcb = mainapp.gaSet['sub1_pcb']
+                sub1_pcb = self.mainapp.gaSet['sub1_pcb']
             else:
                 sub1_pcb_rev = ''
                 sub1_pcb = ''
 
         ee_str += f'SUB_CARD_1_HW_VERSION={sub1_pcb_rev},'
         ee_str += f'HARDWARE_ADDITION={hwAdd},'
-        ee_str += f'CSL={mainapp.gaSet['csl']},'
-        ee_str += f'PART_NUMBER={mainapp.gaSet['mrkt_name']},'
-        ee_str += f'PCB_MAIN_ID={mainapp.gaSet['main_pcb']},'
+        ee_str += f'CSL={self.mainapp.gaSet['csl']},'
+        ee_str += f'PART_NUMBER={self.mainapp.gaSet['mrkt_name']},'
+        ee_str += f'PCB_MAIN_ID={self.mainapp.gaSet['main_pcb']},'
         ee_str += f'PCB_SUB_CARD_1_ID={sub1_pcb},'
         ee_str += f'PS={ps},'
-        if re.search('/HL', mainapp.gaSet['dbr_name']) or re.search('ETX', mainapp.gaSet['dbr_name']):
-            ee_str += f'SD_SLOT="",'
+        if re.search('/HL', self.mainapp.gaSet['dbr_name']) or re.search('ETX', self.mainapp.gaSet['dbr_name']):
+            ee_str += f'SD_SLOT=,'
         else:
             ee_str += f'SD_SLOT=YES,'
         ee_str += f'SERIAL_1={ser1},'
@@ -578,29 +580,39 @@ class Gen:
         ee_str += f'RS485_1={s1rs485},'
         ee_str += f'RS485_2={s2rs485},'
         
-        if re.search('ETX', mainapp.gaSet['dbr_name']:
-            ee_str += f'DRY_CONTACT_IN_OUT="",'
+        if re.search('ETX', self.mainapp.gaSet['dbr_name']):
+            ee_str += f'DRY_CONTACT_IN_OUT=,'
         else:
-        ee_str += f'DRY_CONTACT_IN_OUT="2_2",'
+            ee_str += f'DRY_CONTACT_IN_OUT=2_2,'
 
-        if mainapp.gaSet['wanPorts'] == "4U2S":
-            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=FIBER,LAN_3_4=YES'
-        elif mainapp.gaSet['wanPorts'] == "2U":
-            ee_str += f'NNI_WAN_1="",NNI_WAN_2="",LAN_3_4=""'
-        elif mainapp.gaSet['wanPorts'] == "5U1S":
-            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=FIBER,LAN_3_4=YES'
-        elif mainapp.gaSet['wanPorts'] == "1SFP1UTP":
-            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=COPPER,LAN_3_4=YES'
+        if self.mainapp.gaSet['wanPorts'] == "4U2S":
+            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=FIBER,LAN_3_4=YES,'
+        elif self.mainapp.gaSet['wanPorts'] == "2U":
+            ee_str += f'NNI_WAN_1=,NNI_WAN_2=,LAN_3_4=,'
+        elif self.mainapp.gaSet['wanPorts'] == "5U1S":
+            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=FIBER,LAN_3_4=YES,'
+        elif self.mainapp.gaSet['wanPorts'] == "1SFP1UTP":
+            ee_str += f'NNI_WAN_1=FIBER,NNI_WAN_2=COPPER,LAN_3_4=YES,'
         
         ee_str += f'LIST_REF=0.0,END='
 
         self.add_to_log(ee_str)
 
-        ee_file = Path(os.path.join(mainapp.gaSet['log'], "eeprom." + str(mainapp.gaSet['gui_num']) + ".txt"))
+        ee_file_name = f"eeprom.{str(self.mainapp.gaSet['gui_num'])}.txt"
+        ee_file = Path(os.path.join(self.mainapp.gaSet['logs_fld'], ee_file_name))
         with open(ee_file, 'w+') as ee:
             ee.write(ee_str)
+
+        tftpboot_fld =  '/var/lib/tftpboot'
+        tftpboot_ee_file = Path(os.path.join(tftpboot_fld, ee_file_name))
+        try:
+            subprocess.check_output(f'echo 1q2w3e4r5t | sudo -S cp {ee_file} {tftpboot_ee_file}', 
+                            shell=True)            
+        except Exception as e:
+            self.mainapp.gaSet['fail'] = e
+            return -1
             
-        return 0
+        return 0, ee_file_name
   
 
     def get_mac(self):
