@@ -12,7 +12,8 @@ class Main:
         test_names_lst = []
         test_names_lst = ["Secure_UBoot"]
         test_names_lst= ['Set_Env']
-        test_names_lst += ['Eeprom']
+        test_names_lst = ['Eeprom']
+        test_names_lst = ['ID']
         # test_names_lst= ['Set_Env', 'Eeprom', 'Run_BootNet', 'ID']
 
         if self.mainapp.gaSet['uut_opt'] != 'ETX':
@@ -163,4 +164,214 @@ class Main:
             return -1 
         
         return ret
+    
+
+    def ID(self):
+        gen = lib_gen.Gen(self.mainapp)
+        com = self.mainapp.gaSet['comDut']
+        ser = lib_gen.RLCom(com)
+        res = ser.open()
+        if res is False:
+            self.mainapp.gaSet['fail'] = f'Open COM {com} Fail'
+            return -1
+        
+        ret = self.login(gen, ser)
+        if ret == 0:
+            ret = ser.send('configure system\r', "system")
+            if ret != 0:
+                self.mainapp.gaSet['fail'] = "Can't reach 'system'"
+        
+        if ret == 0:
+            ret = ser.send('show device-information\r', "ngine")
+            buf = re.sub(r' +', ' ', ser.buffer)
+            gen.add_to_log(buf)
+            if ret != 0:
+                self.mainapp.gaSet['fail'] = "Can't reach 'device-information'"
+            
+        if ret == 0:
+            ma = re.search('Sw:\s+([\d\.a-z]+)\s', ser.buffer)
+            if not ma:
+                self.mainapp.gaSet['fail'] = "Can't read SW"
+                ret = -1
+
+        if ret == 0:        
+            uut_ver = ma.group(1)
+            dbr_ver = self.mainapp.gaSet['sw_app']
+            print(f'uut_ver:<{uut_ver}>, dbr_ver:<{dbr_ver}>')
+            gen.add_to_log(f'SW version: {uut_ver}')
+
+            if uut_ver != dbr_ver:
+                self.mainapp.gaSet['fail'] = f"SW is {uut_ver}. Should be {dbr_ver}"
+                ret = -1
+
+        if ret == 0:
+            ma = re.search('Hw:\s+([\w\.\/]+)\s?', ser.buffer)
+            if not ma:
+                self.mainapp.gaSet['fail'] = "Can't read HW"
+                ret = -1
+
+        if ret == 0:        
+            uut_ver = float(ma.group(1))
+            ma = re.search(r'REV([\d\.]+)\w', self.mainapp.gaSet['main_pcb'])
+            main_pcb_rev = float(ma.group(1))
+            print(f'uut_ver:<{uut_ver}>, main_pcb_rev:<{main_pcb_rev}>')
+            gen.add_to_log(f'HW version: {uut_ver}')
+
+            if uut_ver != main_pcb_rev:
+                self.mainapp.gaSet['fail'] = f"HW is {uut_ver}. Should be {main_pcb_rev}"
+                ret = -1
+
+        if ret == 0:
+            ma = re.search('Model[:\s]+([a-zA-Z\d\-\_\/\s]+)\s[FL]', ser.buffer)
+            if not ma:
+                self.mainapp.gaSet['fail'] = "Can't read Model"
+                ret = -1
+        if ret == 0:
+            model = ma.group(1).strip()
+            print(f'model:<{model}>')
+            gen.add_to_log(f'Model: {model}')
+            if self.mainapp.gaSet['wanPorts'] in ['4U2S', '5U1S']:
+                if main_pcb_rev < 0.6 and model != 'SF-1P superset':
+                    self.mainapp.gaSet['fail'] = f"The Model is '{model}'. Should be 'SF-1P superset'"
+                    ret = -1
+                elif main_pcb_rev >= 0.6 and model != 'SF-1P superset CP_2':
+                    self.mainapp.gaSet['fail'] = f"The Model is '{model}'. Should be 'SF-1P superset CP_2'"
+                    ret = -1
+            elif self.mainapp.gaSet['wanPorts'] in ['2U'] and model != 'SF-1P':
+                self.mainapp.gaSet['fail'] = f"The Model is '{model}'. Should be 'SF-1P'"
+                ret = -1
+            elif self.mainapp.gaSet['wanPorts'] in ['1SFP1UTP'] and model != 'ETX-1P':
+                self.mainapp.gaSet['fail'] = f"The Model is '{model}'. Should be 'ETX-1P'"
+                ret = -1
+
+        if ret == 0:        
+            ret = self.read_boot_params(gen, ser)    
+
+        ser.close()
+        return ret
+    
+    def login(self, gen, ser):
+        print(f'\n{gen.my_time()} Login')
+        self.mainapp.status_bar_frame.status(f'Login')
+        if self.mainapp.gaSet['uut_opt'] == 'ETX':
+            prmt = 'ETX-1p'
+        else:
+            prmt = 'SF-1p'
+
+        ret = ser.send('\r\r\r\r', "user>", 1)
+        if re.search(prmt, ser.buffer):
+            ser.send('exit all\r', prmt)
+            return 0
+
+        ser.send('su\r', "assword")
+        ret = ser.send('1234\r', "-1p#", 3)
+        if ret == "-1":
+            if re.search('Login failed user', ser.buffer):
+                ser.send('su\r4\r', "again", 3)
+            ser.send('4\r', "again", 3)
+            ret = ser.send('4\r', "-1p#", 3)
+        if ret == 0:
+            return 0
+        
+        st_sec = time.time()
+        max_wait = 450
+        run_sec = 0
+        while True:
+            run_sec = self.calc_run_sec(st_sec)
+            self.mainapp.status_bar_frame.run_time(run_sec)
+            self.mainapp.status_bar_frame.status(f'Wait for Login ({run_sec} sec)')
+            if run_sec > max_wait:
+                self.mainapp.gaSet['fail'] = "Can't login"
+                return -1
+        
+            ser.send('\r', 'user>', 1)
+            if re.search('PCPE>', ser.buffer):
+                ser.send('boot\r', 'stam', 2)
+            if re.search(' E ', ser.buffer):
+                ser.send('x\rx\r', 'stam', 2)
+            if re.search('user>', ser.buffer):
+                ser.send('su\r', "assword")
+                ret = ser.send('1234\r', "-1p#", 3)
+                if ret == "-1":
+                    if re.search('Login failed user', ser.buffer):
+                        ser.send('su\r4\r', "again", 3)
+                    ser.send('4\r', "again", 3)
+                    ret = ser.send('4\r', "-1p#", 3)
+                if ret == 0:
+                    break
+
+            time.sleep(4)
+
+        if ret != 0:
+            self.mainapp.gaSet['fail'] = "Can't login"
+        
+        return ret
+        
+
+    def calc_run_sec(self, st_sec):
+        return int(time.time() - st_sec)
+    
+    def read_boot_params(self, gen, ser):
+        print(f'\n{gen.my_time()} Read Boot Params')
+        gen.power("1", "0")
+        time.sleep(4)
+        gen.power("1", "1")
+        res = -1
+        buf = ''
+        for i in range(1,21):
+            res = ser.send('\r', 'PCPE>>', 1)
+            buf += ser.buffer
+            print(f'{i} read_boot_params res: <{res}>')
+            if res == 0:
+                break
+            #time.sleep(1.0)
+
+        if res == -1:
+            self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"
+            ret = -1
+        else:
+            ret = 0
+
+        if ret == 0:            
+            ma = re.search(f"VER{self.mainapp.gaSet['sw_boot'][1:]}", buf)
+            print(f'buf:<{buf}> ma:<{ma}>')
+            gen.add_to_log(f"Boot Ver.: VER{self.mainapp.gaSet['sw_boot'][1:]}")
+            if not ma:
+                self.mainapp.gaSet['fail'] = f"No VER{self.mainapp.gaSet['sw_boot'][1:]} in Boot"
+                ret = -1
+
+        if ret == 0:            
+            ma = re.search(r"DRAM:\s+(\d)\s+GiB", buf)
+            if not ma:
+                self.mainapp.gaSet['fail'] = "Can't read DRAM"
+                ret = -1
+        if ret == 0:
+            dbr_ram = str(self.mainapp.gaSet['mem'])
+            uut_ram = ma.group(1)
+            gen.add_to_log(f'DRAM: {uut_ram} GiB')
+            if uut_ram != dbr_ram:
+                self.mainapp.gaSet['fail'] = f"DRAM is {uut_ram}. Should be {dbr_ram}"
+                ret = -1
+
+        if ret == 0:
+            ser.send('printenv NFS_VARIANT\r', 'PCPE>')
+            gen.add_to_log(f'{ser.buffer}')
+            if not re.search('NFS_VARIANT=general', ser.buffer):
+                self.mainapp.gaSet['fail'] = f"No 'NFS_VARIANT=general' in Boot"
+                ret = -1
+        
+        if ret == 0:
+            ser.send('printenv fdt_name\r', 'PCPE>')
+            gen.add_to_log(f'{ser.buffer}')
+            if re.search('/HL', self.mainapp.gaSet['dbr_name']):                
+                if not re.search('armada-3720-SF1p_superSet_hl.dtb', ser.buffer):
+                    self.mainapp.gaSet['fail'] = f"'fdt_name' is not 'armada-3720-SF1p_superSet_hl.dtb'"
+                    ret = -1
+        
+        ser.send('boot\r', 'stam', 1)
+        return ret
+
+
+        
+
 

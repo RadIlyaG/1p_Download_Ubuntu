@@ -355,18 +355,18 @@ class InfoFrame(tk.Frame):
         
     def put_widgets(self):
         self.lab_act_package_txt = ttk.Label(self, text='Package:')
-        self.lab_act_package_val = ttk.Label(self, text='Package.val')
-        self.lab_sw_txt = ttk.Label(self, text='SW Ver.: xxx')
-        self.lab_sw_val = ttk.Label(self, text='SW Ver.val')
+        self.lab_act_package_val = ttk.Label(self, text='')
+        self.lab_sw_txt = ttk.Label(self, text='SW Ver.:')
+        self.lab_sw_val = ttk.Label(self, text='')
         self.lab_flash_txt = ttk.Label(self, text='Flash Image:')
-        self.lab_flash_val = ttk.Label(self, text='Flash Image.val')
+        self.lab_flash_val = ttk.Label(self, text='')
         
         self.lab_act_package_txt.grid(row=0, column=0, sticky='w', padx=2, pady=2)
         self.lab_act_package_val.grid(row=0, column=1, sticky='e', padx=2, pady=2)
         self.lab_sw_txt.grid(row=1, column=0, sticky='w', padx=2, pady=2)
         self.lab_sw_val.grid(row=1, column=1, sticky='e', padx=2, pady=2)
-        self.lab_flash_txt.grid(row=2, column=0, sticky='w', padx=2, pady=2)
-        self.lab_flash_val.grid(row=2, column=1, sticky='e', padx=2, pady=2)
+        # self.lab_flash_txt.grid(row=2, column=0, sticky='w', padx=2, pady=2)
+        # self.lab_flash_val.grid(row=2, column=1, sticky='e', padx=2, pady=2)
 
         
 class BarcodesFrame(tk.Frame):
@@ -440,7 +440,6 @@ class BarcodesFrame(tk.Frame):
             w.grid(row=self.barcode_widgets.index(w)//3, 
                    column=self.barcode_widgets.index(w)%3, 
                    sticky='w')
-
 
 
     def bind_uutId_entry(self, *event):
@@ -806,6 +805,6 @@ if __name__ == '__main__':
     if len(sys.argv)==2:
         gui_num = sys.argv[1]
     else:
-        gui_num = 1
+        gui_num = 3
     app = App(gui_num)
     app.mainloop()

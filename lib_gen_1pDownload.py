@@ -418,6 +418,7 @@ class Gen:
                     self.mainapp.gaSet['sw_boot'] = ver
                 else:
                     self.mainapp.gaSet['sw_app'] = ver
+                    self.mainapp.main_frame.frame_info.lab_sw_val.configure(text=ver)
             print(f'get dbr sw {self.mainapp.gaSet}')
         return res
 
