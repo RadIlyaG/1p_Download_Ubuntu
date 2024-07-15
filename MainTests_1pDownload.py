@@ -17,7 +17,7 @@ class Main:
         # test_names_lst= ['Set_Env', 'Eeprom', 'Run_BootNet', 'ID']
 
         if self.mainapp.gaSet['uut_opt'] != 'ETX':
-            test_names_lst += ['MicroSD']
+            test_names_lst = ['MicroSD']
 
         test_names_lst += 'SOC_Flash_Memory', 'SOC_i2C', 'Front_Panel_Leds'
 
@@ -371,7 +371,71 @@ class Main:
         ser.send('boot\r', 'stam', 1)
         return ret
 
+    def MicroSD(self):
+        gen = lib_gen.Gen(self.mainapp)
+        com = self.mainapp.gaSet['comDut']
+        ser = lib_gen.RLCom(com)
+        res = ser.open()
+        if res is False:
+            self.mainapp.gaSet['fail'] = f'Open COM {com} Fail'
+            return -1
+        
+        ret = ser.send('\r', 'PCPE>>', 1)
+        if ret !=0:
+            gen.power("1", "0")
+            time.sleep(4)
+            gen.power("1", "1")
+        
+            for i in range(1,21):
+                ret = ser.send('\r', 'PCPE>>', 1)
+                print(f'{i} MicroSD ret: <{ret}>')
+                if ret == 0:
+                    break
+                time.sleep(1.0)
 
+            if ret == -1:
+                self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"            
+            
+        if ret == 0:
+            ser.send('mmc dev 0:1\r', 'PCPE>')
+            time.sleep(0.5)
+            ret = ser.send('mmc dev 0:1\r', 'PCPE>')
+            if ret != 0:
+                self.mainapp.gaSet['fail'] = "'mmc dev 0:1' fail"
+        
+        if ret == 0:
+            if not re.search('switch to partitions #0, OK', ser.buffer):
+                time.sleep(0.5)
+                ser.send('mmc dev 0:1\r', 'PCPE>')
+                if not re.search('switch to partitions #0, OK', ser.buffer):
+                    self.mainapp.gaSet['fail'] = "'switch to partitions #0, OK' doesn't exist"
+                    ret = -1
+
+        if ret == 0:
+            if not re.search('mmc0 is current device', ser.buffer):
+                time.sleep(0.5)
+                ser.send('mmc dev 0:1\r', 'PCPE>')
+                if not re.search('mmc0 is current device', ser.buffer):
+                    self.mainapp.gaSet['fail'] = "'mmc0 is current device' doesn't exist"
+                    ret = -1
+
+        if ret == 0:
+            ser.send('mmc info\r', 'PCPE')
+            time.sleep(0.5)
+            ret = ser.send('mmc info\r', 'PCPE>')
+            if ret != 0:
+                self.mainapp.gaSet['fail'] = "'mmc info' fail"
+
+        if ret == 0:
+            gen.add_to_log(ser.buffer)
+            if not re.search('Capacity: 29.7 GiB', ser.buffer):
+                self.mainapp.gaSet['fail'] = "'Capacity: 29.7 GiB' doesn't exist"
+                ret = -1
+
+
+
+        ser.close()
+        return ret
         
 
 
