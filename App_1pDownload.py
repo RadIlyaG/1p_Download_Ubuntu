@@ -217,7 +217,7 @@ class StartFromFrame(tk.Frame):
 
         self.img = Image.open(os.path.join(script_dir, "images", "stop1.gif"))
         use_img = ImageTk.PhotoImage(self.img)
-        self.b_stop = ttk.Button(self, text="Stop", image=use_img)
+        self.b_stop = ttk.Button(self, text="Stop", image=use_img, command=partial(self.button_stop))
         self.b_start.b_stop = use_img
 
         self.lab_curr_test = ttk.Label(self, text='Current Test:')
@@ -340,6 +340,16 @@ class StartFromFrame(tk.Frame):
         finally:
             # MenuBar.use_ex_barc.set(0)
             print(f'ButRun finally: ret:{ret}  {self.mainapp.gaSet}')
+
+    def button_stop(self, *event):
+        self.mainapp.gaSet['root'].update()
+        gen = lib_gen.Gen(self.mainapp)
+        print(f'\n{gen.my_time()} button_stop')
+        # self.mainapp.status_bar_frame.status('')
+        self.mainapp.gaSet['act'] = 0
+        self.b_start.state(["!pressed", "!disabled"])
+        self.b_stop.state(["pressed", "disabled"])
+        self.mainapp.gaSet['root'].update()
 
 
 class InfoFrame(tk.Frame):
