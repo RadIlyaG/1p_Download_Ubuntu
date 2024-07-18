@@ -133,13 +133,13 @@ class Gen:
         return dicti
 
     def save_init(self, appwin):
-        print(f'save_init, self:{self}, appwin:{appwin}')
+        print(f'save_init, self:{self}, appwin:{appwin}, {appwin.gaSet}')
         ip = appwin.gaSet['pc_ip']
         host = ip.replace('.', '_')
         gui_num = appwin.gaSet['gui_num']
         host_fld = appwin.gaSet['host_fld']
         Path(host).mkdir(parents=True, exist_ok=True)
-        ini_file = Path(os.path.join(host, "init." + str(gui_num) + ".json"))
+        ini_file = Path(os.path.join(host_fld, "init." + str(gui_num) + ".json"))
         print(f'save_init host:<{host}>, pwd:<{os.getcwd()}>, ini_file:<{ini_file}>')
 
         di = {}

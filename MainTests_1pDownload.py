@@ -2,6 +2,8 @@ import re
 import time
 
 import lib_gen_1pDownload as lib_gen
+import lib_DialogBox as dbox
+
 
 class Main:
     def __init__(self, mainapp):
@@ -19,7 +21,8 @@ class Main:
         if self.mainapp.gaSet['uut_opt'] != 'ETX':
             test_names_lst = ['MicroSD']
 
-        test_names_lst = 'SOC_Flash_Memory', 'SOC_i2C', 'Front_Panel_Leds'
+        test_names_lst = ['SOC_Flash_Memory', 'SOC_i2C']
+        test_names_lst = ['Front_Panel_Leds']
 
         ind = 1
         for te in test_names_lst:
@@ -197,7 +200,7 @@ class Main:
                 self.mainapp.gaSet['fail'] = "Can't reach 'device-information'"
             
         if ret == 0:
-            ma = re.search('Sw:\s+([\d\.a-z]+)\s', ser.buffer)
+            ma = re.search(r'Sw:\s+([\d\.a-z]+)\s', ser.buffer)
             if not ma:
                 self.mainapp.gaSet['fail'] = "Can't read SW"
                 ret = -1
@@ -213,7 +216,7 @@ class Main:
                 ret = -1
 
         if ret == 0:
-            ma = re.search('Hw:\s+([\w\.\/]+)\s?', ser.buffer)
+            ma = re.search(r'Hw:\s+([\w\.\/]+)\s?', ser.buffer)
             if not ma:
                 self.mainapp.gaSet['fail'] = "Can't read HW"
                 ret = -1
@@ -230,7 +233,7 @@ class Main:
                 ret = -1
 
         if ret == 0:
-            ma = re.search('Model[:\s]+([a-zA-Z\d\-\_\/\s]+)\s[FL]', ser.buffer)
+            ma = re.search(r'Model[:\s]+([a-zA-Z\d\-\_\/\s]+)\s[FL]', ser.buffer)
             if not ma:
                 self.mainapp.gaSet['fail'] = "Can't read Model"
                 ret = -1
@@ -504,10 +507,10 @@ class Main:
                     ret = -1
 
         if ret == 0:
-            if not re.search('mmc1\(part 0\) is current device', ser.buffer):
+            if not re.search(r'mmc1\(part 0\) is current device', ser.buffer):
                 time.sleep(0.5)
                 ser.send('mmc dev 1:0\r', 'PCPE>')
-                if not re.search('mmc1\(part 0\) is current device', ser.buffer):
+                if not re.search(r'mmc1\(part 0\) is current device', ser.buffer):
                     self.mainapp.gaSet['fail'] = "'mmc1(part 0) is current device' doesn't exist"
                     ret = -1
 
@@ -543,7 +546,7 @@ class Main:
                 ret = -1
     
         if ret == 0:
-            if not re.search('sdhci@d8000: 1 \(eMMC\)', ser.buffer):
+            if not re.search(r'sdhci@d8000: 1 \(eMMC\)', ser.buffer):
                 self.mainapp.gaSet['fail'] = "'sdhci@d8000: 1 (eMMC)' doesn't exist"
                 ret = -1
 
@@ -636,6 +639,59 @@ class Main:
             if not re.search('0000: bb', ser.buffer):
                 self.mainapp.gaSet['fail'] = "'0000: bb' doesn't exist"
                 ret = -1
+
+        ser.close()
+        return ret
+
+    def Front_Panel_Leds(self):
+        gen = lib_gen.Gen(self.mainapp)
+        com = self.mainapp.gaSet['comDut']
+
+        gen.power("1", "0")
+        gen.play_sound('information')
+        db_dict = {
+            "title": "BOOT Leds Test",
+            "message": "Remove the SD card",
+            "type": ["Ok", "Cancel"],
+            "icon": "::tk::icons::information",
+            'default': 0
+        }
+
+        dibox = dbox.DialogBox()
+        dibox.create(self.mainapp, db_dict)
+        string, res_but, ent_dict = dibox.show()
+        print(string, res_but)
+
+        
+        return 0
+
+        ser = lib_gen.RLCom(com)
+        res = ser.open()
+        if res is False:
+            self.mainapp.gaSet['fail'] = f'Open COM {com} Fail'
+            return -1
+        
+        ret = ser.send('\r', 'PCPE>>', 1)
+        if ret !=0:
+            gen.power("1", "0")
+            time.sleep(4)
+            gen.power("1", "1")
+        
+            for i in range(1,21):
+                self.mainapp.gaSet['root'].update()
+                if self.mainapp.gaSet['act'] == 0:
+                    ret = -2
+                    break
+
+                ret = ser.send('\r', 'PCPE>>', 1)
+                print(f'{i} SOC_i2C ret: <{ret}>')
+                if ret == 0:
+                    break
+                time.sleep(1.0)
+
+            if ret == -1:
+                self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"            
+            
 
         ser.close()
         return ret

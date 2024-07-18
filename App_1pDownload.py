@@ -27,6 +27,7 @@ import lib_gen_1pDownload as lib_gen
 import lib_radapps_1pDownload as radapps
 import test_my_procs as tmp
 import MainTests_1pDownload as main
+import lib_DialogBox as dbox
 
 
 class App(tk.Tk):
@@ -59,6 +60,7 @@ class App(tk.Tk):
         self.gaSet['gui_num'] = gui_num
         self.gaSet['pc_ip'] = ip
         self.gaSet['root'] = self
+        self.gaSet['host_fld'] = host_fld
         self.if_rad_net()
         
         self.put_frames()
@@ -70,6 +72,8 @@ class App(tk.Tk):
 
         self.status_bar_frame.status("Scan UUT barcode to start")
         self.bind('<Alt-r>', partial(self.main_frame.frame_start_from.button_run))
+
+        # print(self.gaSet)
         
     def put_frames(self):
         mainapp = self
@@ -94,7 +98,10 @@ class App(tk.Tk):
             "icon": "::tk::icons::question",
             'default': 0
         }
-        string, res_but, ent_dict = DialogBox(self, db_dict).show()
+        dibox = dbox.DialogBox()
+        dibox.create(self, db_dict)
+        string, res_but, ent_dict = dibox.show()
+        #string, res_but, ent_dict = neDialogBox(self, db_dict).show()
         print(string, res_but)
         if res_but == "Yes":
             for f in glob.glob("SW*.txt"):
@@ -457,6 +464,7 @@ class BarcodesFrame(tk.Frame):
         print(f'\n{gen.my_time()}bind_uutId_entry self:{self} mainapp:{self.mainapp} event:{event}')
         id_number = self.uut_id.get()
         print(f'bind_uutId_entry id_number:{id_number}')
+        dibox = dbox.DialogBox()
 
         if id_number == 'test_retrive_dut_family':
             tmp.test_retrive_dut_family(self.mainapp)
@@ -475,8 +483,9 @@ class BarcodesFrame(tk.Frame):
             self.mainapp.title(str(self.mainapp.gaSet['gui_num']) + ': ' + dbr_name)
             self.mainapp.gaSet['dbr_name'] = dbr_name
         else:
-            DialogBox(self.mainapp, db_dict={'title': "Get DBR Name fail", 'type': ['OK'], 'message': dbr_name,
-                                                     'icon': '::tk::icons::error'}).show()
+            # DialogBox(self.mainapp, db_dict={'title': "Get DBR Name fail", 'type': ['OK'], 'message': dbr_name, 'icon': '::tk::icons::error'}).show()
+            dibox.create(self.mainapp, db_dict={'title': "Get DBR Name fail", 'type': ['OK'], 'message': dbr_name, 'icon': '::tk::icons::error'})
+            string, res_but, ent_dict = dibox.show()
             self.mainapp.gaSet['fail'] = dbr_name
             return False
 
@@ -487,8 +496,11 @@ class BarcodesFrame(tk.Frame):
         if res:
             self.mainapp.gaSet['mrkt_name'] = mrkt_name
         else:
-            DialogBox(self.mainapp, db_dict={'title': "Get Marketing Name fail", 'type': ['OK'], 'message': mrkt_name,
-                                                     'icon': '::tk::icons::error'}).show()
+            # DialogBox(self.mainapp, db_dict={'title': "Get Marketing Name fail", 'type': ['OK'], 'message': mrkt_name,
+            #                                          'icon': '::tk::icons::error'}).show()
+            dibox.create(self.mainapp, db_dict={'title': "Get Marketing Name fail", 'type': ['OK'], 'message': dbr_name, 'icon': '::tk::icons::error'})
+            string, res_but, ent_dict = dibox.show()
+            
             self.mainapp.gaSet['fail'] = mrkt_name
             return False
 
@@ -499,8 +511,10 @@ class BarcodesFrame(tk.Frame):
         if res:
             self.mainapp.gaSet['csl'] = csl
         else:
-            DialogBox(self.mainapp, db_dict={'title': "Get CSL fail", 'type': ['OK'], 'message': csl,
-                                        'icon': '::tk::icons::error'}).show()
+            # DialogBox(self.mainapp, db_dict={'title': "Get CSL fail", 'type': ['OK'], 'message': csl,
+            #                             'icon': '::tk::icons::error'}).show()
+            dibox.create(self.mainapp, db_dict={'title': "Get CSL fail", 'type': ['OK'], 'message': dbr_name, 'icon': '::tk::icons::error'})
+            string, res_but, ent_dict = dibox.show()
             return False
 
         self.mainapp.gaSet['id_number'] = id_number
@@ -509,9 +523,14 @@ class BarcodesFrame(tk.Frame):
         res = gen.retrive_dut_fam()
         print(f'bind_uutId_entry res_retrive_dut_fam:{res}')
         if res != True:
-            DialogBox(self.mainapp, db_dict={'title': "Retrive UUT family fail", 'type': ['OK'],
-                                        'message': "Retrive UUT family fail",
-                                        'icon': '::tk::icons::error'}).show()
+            # DialogBox(self.mainapp, db_dict={'title': "Retrive UUT family fail", 'type': ['OK'],
+            #                             'message': "Retrive UUT family fail",
+            #                             'icon': '::tk::icons::error'}).show()
+            dibox.create(self.mainapp, db_dict={'title': "Retrive UUT family fail", 'type': ['OK'], 
+                                                'message': "Retrive UUT family fail", 
+                                                'icon': '::tk::icons::error'})
+            string, res_but, ent_dict = dibox.show()
+            
             self.mainapp.status_bar_frame.status(f'Retrive UUT family fail for {id_number}', 'red')
             return False
 
@@ -610,7 +629,7 @@ class StatusBarFrame(tk.Frame):
         self.label3.update_idletasks()
         
 
-class DialogBox(tk.Toplevel):
+class neDialogBox(tk.Toplevel):
     def __init__(self, parent, db_dict, *args):
         self.args = args
         print(f"DialogBox parent:{parent} txt:{db_dict['message']} args:{args}")
@@ -802,6 +821,14 @@ class DialogBox(tk.Toplevel):
         # except Exception as err:
         #     print(err)
         return [self.var.get(), self.but, self.ent_dict]
+    
+
+class DemoClass:
+    def __init__(self):
+        pass
+    
+    def decl(self):
+        print('decl!!!')
 
 
 '''print(sys.argv, len(sys.argv))
