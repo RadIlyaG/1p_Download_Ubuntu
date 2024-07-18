@@ -646,52 +646,208 @@ class Main:
     def Front_Panel_Leds(self):
         gen = lib_gen.Gen(self.mainapp)
         com = self.mainapp.gaSet['comDut']
+        dibox = dbox.DialogBox()
 
         gen.power("1", "0")
-        gen.play_sound('information')
+        gen.play_sound('info.wav')
         db_dict = {
             "title": "BOOT Leds Test",
-            "message": "Remove the SD card",
+            "message": "Remove the SD card\t\t",
             "type": ["Ok", "Cancel"],
             "icon": "::tk::icons::information",
             'default': 0
-        }
-
-        dibox = dbox.DialogBox()
+        }        
         dibox.create(self.mainapp, db_dict)
         string, res_but, ent_dict = dibox.show()
         print(string, res_but)
-
+        if res_but == 'Cancel':
+            return -2
         
-        return 0
-
         ser = lib_gen.RLCom(com)
         res = ser.open()
         if res is False:
             self.mainapp.gaSet['fail'] = f'Open COM {com} Fail'
             return -1
+        ret = 0
         
-        ret = ser.send('\r', 'PCPE>>', 1)
-        if ret !=0:
-            gen.power("1", "0")
-            time.sleep(4)
-            gen.power("1", "1")
-        
-            for i in range(1,21):
-                self.mainapp.gaSet['root'].update()
-                if self.mainapp.gaSet['act'] == 0:
-                    ret = -2
-                    break
+    
+        # gen.power("1", "0")
+        # time.sleep(4)
+        gen.power("1", "1")
+    
+        for i in range(1,21):
+            self.mainapp.gaSet['root'].update()
+            if self.mainapp.gaSet['act'] == 0:
+                ret = -2
+                break
 
-                ret = ser.send('\r', 'PCPE>>', 1)
-                print(f'{i} SOC_i2C ret: <{ret}>')
-                if ret == 0:
-                    break
-                time.sleep(1.0)
+            ret = ser.send('\r', 'PCPE>>', 1)
+            print(f'{i} Front_Panel_Leds ret: <{ret}>')
+            if ret == 0:
+                break
+            time.sleep(1.0)
 
-            if ret == -1:
-                self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"            
+        if ret == -1:
+            self.mainapp.gaSet['fail'] = "Can't get PCPE prompt"   
+
+        if ret == 0:
+            ret = -1
+            for i in range(1,4):
+                ser.send('mmc dev 0:1\r', 'PCPE>')  
+                if re.search('ot found', ser.buffer):
+                    ret = 0
+                    break  
+                else:
+                    gen.play_sound('info.wav')
+                    dibox.create(self.mainapp, db_dict)
+                    string, res_but, ent_dict = dibox.show()
+                    print(string, res_but)
+                    if res_but == 'Cancel':
+                        ret = -2
+                        break
+                    else:
+                        ser.send('mmc dev 0:1\r', 'PCPE>')  
+                        if re.search('ot found', ser.buffer) or re.search('did not respond', ser.buffer):
+                            ret = 0
+                            break
             
+            if ret == -1:
+                self.mainapp.gaSet['fail'] = "SD Card isn't pulled out"
+
+        if self.mainapp.gaSet['uut_opt'] == 'ETX':
+            run_txt = ''
+            verb = ' is'
+        else:
+            run_txt = 'and RUN '
+            verb = 's are'
+        if ret == 0:
+            gen.play_sound('info.wav')
+            db_dict = {
+                "title": f"ALM {run_txt} Led Test",
+                "message": f"Verify the ALM {run_txt} Led{verb} OFF",
+                "type": ["Yes", "No"],
+                "icon": "::tk::icons::information",
+                'default': 0
+            }
+            dibox.create(self.mainapp, db_dict)
+            string, res_but, ent_dict = dibox.show()
+            print(string, res_but)
+            if res_but == 'No':
+                ret = -1
+                self.mainapp.gaSet['fail'] = f"ALM {run_txt} Led{verb} not OFF"   
+
+        if ret == 0:
+            ser.send('gpio toogle GPIO112\r', 'PCPE>')
+            gen.play_sound('info.wav')
+            db_dict = {
+                "title": f"PWR {run_txt} Green Led Test",
+                "message": f"Verify the PWR {run_txt} Green Led{verb} ON",
+                "type": ["Yes", "No"],
+                "icon": "::tk::icons::information",
+                'default': 0
+            }
+            dibox.create(self.mainapp, db_dict)
+            string, res_but, ent_dict = dibox.show()
+            print(string, res_but)
+            if res_but == 'No':
+                ret = -1
+                self.mainapp.gaSet['fail'] = f"PWR {run_txt} Led{verb} not ON"   
+
+        if ret == 0:
+            ser.send('gpio toogle GPIO112\r', 'PCPE>')
+            ser.send('gpio toogle GPIO113\r', 'PCPE>')
+            gen.play_sound('info.wav')
+            db_dict = {
+                "title": f"ALM Red Led Test",
+                "message": f"Verify the ALM Red Led is ON\t",
+                "type": ["Yes", "No"],
+                "icon": "::tk::icons::information",
+                'default': 0
+            }
+            dibox.create(self.mainapp, db_dict)
+            string, res_but, ent_dict = dibox.show()
+            print(string, res_but)
+            if res_but == 'No':
+                ret = -1
+                self.mainapp.gaSet['fail'] = f"ALM Red Led is not ON"   
+
+        if ret == 0:
+            ser.send('gpio toogle GPIO113\r', 'PCPE>')
+            ser.send('mii write 1 1 0x80fe\r', 'PCPE>')
+            ser.send('mii write 1 0 0x9656\r', 'PCPE>')
+            gen.play_sound('info.wav')
+            db_dict = {
+                "title": f"AUX Green Led Test",
+                "message": f"Verify the AUX Green Led is ON\t",
+                "type": ["Yes", "No"],
+                "icon": "::tk::icons::information",
+                'default': 0
+            }
+            dibox.create(self.mainapp, db_dict)
+            string, res_but, ent_dict = dibox.show()
+            print(string, res_but)
+            if res_but == 'No':
+                ret = -1
+                self.mainapp.gaSet['fail'] = f"AUX Green Led is not ON"   
+
+        if ret == 0:
+            ser.send('mii write 1 1 0x80ee\r', 'PCPE>')
+            ser.send('mii write 1 0 0x9656\r', 'PCPE>')
+
+            #  all leds ON
+            ser.send('mii write 2 1 0x80ff\r', 'PCPE>')
+            ser.send('mii write 2 0 0x96b6\r', 'PCPE>')
+            if self.mainapp.gaSet['uut_opt'] == 'ETX':
+                # WAN2 led
+                ser.send('mii write 2 0 0x9676\r', 'PCPE>')
+            for reg1 in ['0x80ff', '0x90ff']:
+                for reg2 in ['0x9636', '0x9656', '0x9676', '0x9696']:
+                    ser.send(f'mii write 1 1 {reg1}\r', 'PCPE>')
+                    ser.send(f'mii write 1 0 {reg2}\r', 'PCPE>')
+            
+            gen.play_sound('info.wav')
+            db_dict = {
+                "title": f"Boot Led Test",
+                "message": f"Verify Green Leds are ON on the following ports:\n\nETH 1-6, S1 Tx and RX, S2 Tx and Rx, "
+                           f"SIM 1 and 2\n\nVerify AUX Red Led is ON\n\nDo the Leds light well?",
+                "type": ["Yes", "No"],
+                "icon": "::tk::icons::information",
+                'default': 0
+            }
+            dibox.create(self.mainapp, db_dict)
+            string, res_but, ent_dict = dibox.show()
+            print(string, res_but)
+            if res_but == 'No':
+                ret = -1
+                self.mainapp.gaSet['fail'] = f"Boot Led Test fail"  
+
+        if ret == 0:
+            #  all leds OFF
+            ser.send('mii write 2 1 0x80ee\r', 'PCPE>')
+            ser.send('mii write 2 0 0x96b6\r', 'PCPE>') 
+            if self.mainapp.gaSet['uut_opt'] == 'ETX':
+                # WAN2 led
+                ser.send('mii write 2 0 0x9676\r', 'PCPE>')
+            for reg1 in ['0x80ee', '0x90ee']:
+                for reg2 in ['0x9636', '0x9656', '0x9676', '0x9696']:
+                    ser.send(f'mii write 1 1 {reg1}\r', 'PCPE>')
+                    ser.send(f'mii write 1 0 {reg2}\r', 'PCPE>')
+            
+            gen.play_sound('info.wav')
+            db_dict = {
+                "title": f"Boot Led Test",
+                "message": f"Verify all the Leds, except PWR, are OFF",
+                "type": ["Yes", "No"],
+                "icon": "::tk::icons::information",
+                'default': 0
+            }
+            dibox.create(self.mainapp, db_dict)
+            string, res_but, ent_dict = dibox.show()
+            print(string, res_but)
+            if res_but == 'No':
+                ret = -1
+                self.mainapp.gaSet['fail'] = f"Boot Led Test fail"  
+
 
         ser.close()
         return ret
