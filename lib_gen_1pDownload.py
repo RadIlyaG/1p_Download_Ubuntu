@@ -11,6 +11,9 @@ import serial
 
 import lib_radapps_1pDownload as radapps
 
+# import app_logger
+# logger = app_logger.get_logger(__name__)
+
 
 class Gen:
     def __init__(self, mainapp):
@@ -76,6 +79,7 @@ class Gen:
             
     def read_hw_init(self, gui_num, host_fld):
         print(f'\nread_hw_init, gui_num:{gui_num}, host_fld:{host_fld}')
+        # logger.warning(f'\nread_hw_init, gui_num:{gui_num}, host_fld:{host_fld}')
         # host = ip.replace('.', '_')
         # woDir = os.getcwd()
         # # host_fld = ''
@@ -111,6 +115,7 @@ class Gen:
 
     def read_init(self, appwin, gui_num, host_fld):
         print(f'read_init, self:{self}, appwin:{appwin}, gui_num:{gui_num}, host_fld:{host_fld}')
+        # logger.info(f'\nread_hw_init, gui_num:{gui_num}, host_fld:{host_fld}')
         # print(f'read_init script_dir {os.path.dirname(__file__)}')
         # host = ip.replace('.', '_')
         Path(host_fld).mkdir(parents=True, exist_ok=True)
