@@ -29,6 +29,9 @@ import test_my_procs as tmp
 import MainTests_1pDownload as main
 import lib_DialogBox as dbox
 
+import app_logger
+
+
 
 class App(tk.Tk):
     '''Create the application on base of tk.Tk, put the frames'''
@@ -48,11 +51,16 @@ class App(tk.Tk):
         host = ip.replace('.', '_')
         woDir = os.getcwd()
         if '1p_download' in woDir:
-            host_fld = os.path.join(woDir, host)
+            host_fld = os.path.join(woDir, host)            
+            temp_fld = f'{os.path.dirname(woDir)}/temp'
         else:
             host_fld = os.path.join(woDir, '1p_download', host)
-        print(f'woDir:<{woDir}>host_fld:<{host_fld}>')
+            temp_fld = os.path.join(woDir, 'temp')
+        print(f'woDir:<{woDir}> host_fld:<{host_fld}> temp_fld:<{temp_fld}>')
+        # logger.warning(f'woDir:<{woDir}>host_fld:<{host_fld}>')
         self.gaSet['host_fld'] = host_fld
+        self.gaSet['temp_fld'] = temp_fld
+        Path(temp_fld).mkdir(parents=True, exist_ok=True)
 
         hw_dict = self.gen.read_hw_init(gui_num, host_fld)
         ini_dict = self.gen.read_init(self, gui_num, host_fld)
@@ -61,6 +69,7 @@ class App(tk.Tk):
         self.gaSet['pc_ip'] = ip
         self.gaSet['root'] = self
         self.gaSet['host_fld'] = host_fld
+        self.gaSet['temp_fld'] = temp_fld
         self.if_rad_net()
         
         self.put_frames()
@@ -239,8 +248,10 @@ class StartFromFrame(tk.Frame):
         self.lab_curr_test_val.pack(side='left', padx='2')
 
     def button_run(self, *event):
+        
         gen = lib_gen.Gen(self.mainapp)
         print(f'\n{gen.my_time()} button_run1 mainapp:{self.mainapp}, {self.mainapp.gaSet}')
+        
         self.mainapp.status_bar_frame.status('')
         self.mainapp.gaSet['act'] = 1
         self.b_start.state(["pressed", "disabled"])
@@ -248,6 +259,9 @@ class StartFromFrame(tk.Frame):
 
         now = datetime.now()
         self.mainapp.gaSet['log_time'] = now.strftime("%Y.%m.%d-%H.%M.%S")
+        temp_log = f"{self.mainapp.gaSet['temp_fld']}/{self.mainapp.gaSet['log_time']}_tmp.log"
+        self.mainapp.logger = app_logger.get_logger(__name__, temp_log)
+        self.mainapp.logger.warning(f'\n{gen.my_time()} button_run1 mainapp:{self.mainapp}, {self.mainapp.gaSet}')
 
         woDir = os.getcwd()
         if '1p_download' in woDir:
